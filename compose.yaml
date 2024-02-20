@@ -1,0 +1,57 @@
+services:
+  amass:
+    build: https://github.com/owasp-amass/amass.git#develop
+    container_name: amass
+    networks:
+      - amass
+    volumes:
+      - .:/.config/amass
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  engine:
+    build: https://github.com/owasp-amass/engine.git#develop
+    container_name: engine
+    networks:
+      - amass
+    volumes:
+      - .:/.config/amass
+    expose: 
+      - "4000"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 5
+        window: 360s
+      resources:
+        reservations:
+          memory: 1024M
+    depends_on:
+      assetdb:
+        condition: service_healthy
+
+  assetdb:
+    build: https://github.com/owasp-amass/asset-db.git#master
+    container_name: assetdb
+    networks:
+      - amass
+    volumes:
+      - ./assetdb:/var/lib/postgresql/data
+    env_file:
+      - path: .env
+        required: true
+    ports:
+      - "5432:5432"
+    deploy:
+      restart_policy:
+        condition: any
+      resources:
+        reservations:
+          memory: 128M
+
+networks:
+  amass:
+    driver: bridge
+    name: amass-net

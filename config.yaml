@@ -1,0 +1,44 @@
+scope:
+#  domains: # registered domain names in scope
+#    - owasp.org
+#  ips: # IP addresses in scope, multiple methods of inserting IP addresses can be used
+#    - 192.0.2.1
+#    - 192.0.2.2
+#    - 192.168.0.3-8
+#    - 192.168.0.10-192.168.0.20
+#  cidrs: # CIDR ranges that are in scope
+#    - 192.0.2.0/24
+#    - 192.0.2.128/25
+  ports: # ports to be used when actively engaging with services
+    - 80
+    - 443
+#  blacklist: # subdomains to be blacklisted
+#    - example.owasp.org
+options:
+  engine: "http://engine:4000/graphql"
+  # be sure to set your username and password in the following URI to the 
+  # AMASS_USER and AMASS_PASSWORD values, respectively, in your .env file
+  database: "postgres://amass:YOUR_PASSWORD@assetdb:5432/assetdb"
+  bruteforce:
+    enabled: false
+    wordlists: # wordlist(s) to use that are specific to brute forcing
+      - "./wordlists/short-wordlist.txt"
+      #- "./wordlists/subdomains-top1mil-5000.txt"
+      #- "./wordlists/subdomains-top1mil-20000.txt"
+      #- "./wordlists/subdomains-top1mil-110000.txt"
+  alterations:
+    enabled: false
+    wordlists: # wordlist(s) to use that are specific to name alterations
+      - "./wordlists/alterations.txt"
+  confidence: 50 # default confidence level for all transformations unless otherwise specified
+
+transformations:
+  FQDN->FQDN:
+  FQDN->IPAddress: 
+  IPAddress->FQDN:
+  IPAddress->Netblock:
+  IPAddress->ASN:
+  IPAddress->RIROrg:
+  Netblock->ALL:
+  ASN->ALL:
+  RIROrg->ALL:
