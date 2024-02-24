@@ -4,8 +4,13 @@ services:
     container_name: amass
     networks:
       - amass
+    environment:
+      - SYSLOG_HOST=syslog
+      - SYSLOG_PORT=5514
+      - SYSLOG_TRANSPORT=UDP
     volumes:
-      - .:/.config/amass
+      - ./config:/.config/amass
+      - ./data:/data
     depends_on:
       engine:
         condition: service_healthy
@@ -15,8 +20,12 @@ services:
     container_name: engine
     networks:
       - amass
+    environment:
+      - SYSLOG_HOST=syslog
+      - SYSLOG_PORT=5514
+      - SYSLOG_TRANSPORT=UDP
     volumes:
-      - .:/.config/amass
+      - ./data:/.config/amass
     expose: 
       - "4000"
     deploy:
@@ -31,6 +40,8 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
+      syslog:
+        condition: service_healthy
 
   assetdb:
     build: https://github.com/owasp-amass/asset-db.git#master
@@ -40,8 +51,7 @@ services:
     volumes:
       - ./assetdb:/var/lib/postgresql/data
     env_file:
-      - path: .env
-        required: true
+      - ./config/assetdb.env
     ports:
       - "5432:5432"
     deploy:
@@ -51,7 +61,34 @@ services:
         reservations:
           memory: 128M
 
+  syslog:
+    image: balabit/syslog-ng:latest
+    container_name: syslog
+    networks:
+      - amass
+    environment:
+      - TZ=Etc/UTC
+    configs:
+      - source: syslog_config
+        target: /etc/syslog-ng/syslog-ng.conf
+    volumes:
+      - ./logs:/var/log:rw,z
+    expose:
+      - "5514/udp"
+    deploy:
+      restart_policy:
+        condition: any
+    healthcheck:
+      test: ["CMD", "/usr/sbin/syslog-ng-ctl", "healthcheck"]
+      interval: 5s
+      retries: 20
+    entrypoint: ["/usr/sbin/syslog-ng", "--no-caps", "-F"]
+
 networks:
   amass:
     driver: bridge
     name: amass-net
+
+configs:
+  syslog_config:
+    file: ./config/syslog-ng.conf
