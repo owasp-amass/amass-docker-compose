@@ -19,11 +19,11 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 
 1. Be sure you have an up-to-date version of Docker or Docker Desktop on your system.
 2. Clone this repo: `git clone https://github.com/owasp-amass/amass-docker-compose.git`
-3. Optional: You may want to rename the directory to something smaller (e.g. `amass`)
+3. Optional: you may want to rename the directory to something smaller (e.g. `amass`)
 4. Make the local repo your current working directory: `cd amass-docker-compose`
-5. Open the `.env` file and assign a POSTGRES_PASSWORD and AMASS_PASSWORD. Save.
-6. Make desired changes to the `config.yaml` file, being sure to replace the `YOUR_PASSWORD` field of the `database` value with the password you assigned as your AMASS_PASSWORD. Save.
-7. Optional: Update your `datasources.yaml` file by uncommenting data sources and adding account credentials.
+5. Recommended: open the `config/assetdb.env` file and assign a new POSTGRES_PASSWORD and AMASS_PASSWORD. Save. **This cannot be performed after you start the Docker Compose and the database has been created.**
+6. Make desired changes to the `config.yaml` file, being sure to replace the password field of the `database` value with the password you assigned as your AMASS_PASSWORD. Save.
+7. Optional: update your `datasources.yaml` file by uncommenting data sources and adding account credentials.
 8. Your Amass framework is now configured and ready to be built. Docker Compose will build the required images and start them correctly when you perform your first `amass` command execution.
 9. Type the following to get started: `docker compose run --rm amass enum -d owasp.org`
 
@@ -41,6 +41,7 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 * The `assetdb` is a [PostgreSQL](https://github.com/postgres/postgres) database reachable from your localhost on port 5432.
 * Config files in the local repo are automatically mapped to where components expect to find them in the Docker environment.
 * Interact with the framework using the client program: `docker compose run --rm amass subs -summary -d owasp.org`
+* You can obtain information about Amass and your discoveries by accessing the web UI at the following URL: `http://127.0.0.1:3000`
 
 ## Corporate Supporters
 

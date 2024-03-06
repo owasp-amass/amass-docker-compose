@@ -3,13 +3,11 @@ services:
     build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
-    environment:
-      - SYSLOG_HOST=syslog
-      - SYSLOG_PORT=5514
-      - SYSLOG_TRANSPORT=UDP
+    env_file:
+      - ./config/logs/syslog.env
     volumes:
-      - ./config:/.config/amass
-      - ./data:/data
+      - ./config:/.config/amass:rw
+      - ./data:/data:rw
     depends_on:
       engine:
         condition: service_healthy
@@ -19,12 +17,10 @@ services:
     container_name: engine
     networks:
       - amass
-    environment:
-      - SYSLOG_HOST=syslog
-      - SYSLOG_PORT=5514
-      - SYSLOG_TRANSPORT=UDP
+    env_file:
+      - ./config/logs/syslog.env
     volumes:
-      - ./data:/.config/amass
+      - ./data:/.config/amass:rw
     expose: 
       - "4000"
     deploy:
@@ -41,6 +37,8 @@ services:
         condition: service_healthy
       syslog:
         condition: service_healthy
+      grafana:
+        condition: service_healthy
 
   assetdb:
     build: https://github.com/owasp-amass/asset-db.git#master
@@ -48,9 +46,15 @@ services:
     networks:
       - amass
     volumes:
-      - ./assetdb:/var/lib/postgresql/data
+      - ./assetdb:/var/lib/postgresql/data:rw
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
     env_file:
       - ./config/assetdb.env
+    configs:
+      - source: grafana_initdb
+        target: /docker-entrypoint-initdb.d/2_grafanadb.sql
     ports:
       - "5432:5432"
     deploy:
@@ -77,11 +81,92 @@ services:
     deploy:
       restart_policy:
         condition: any
+    depends_on:
+      loki:
+        condition: service_healthy
+      promtail:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "/usr/sbin/syslog-ng-ctl", "healthcheck"]
       interval: 5s
       retries: 20
     entrypoint: ["/usr/sbin/syslog-ng", "--no-caps", "-F"]
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    networks:
+      - amass
+    configs:
+      - source: loki_config
+        target: /etc/loki/local-config.yaml
+    volumes:
+      - ./logs:/loki:rw
+    expose:
+      - "3100/tcp"
+    deploy:
+      restart_policy:
+        condition: any
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    networks:
+      - amass
+    configs:
+      - source: promtail_config
+        target: /etc/promtail/config.yml
+    expose:
+      - "1514/udp"
+      - "9080/tcp"
+    deploy:
+      restart_policy:
+        condition: any
+    depends_on:
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "exit 0" ]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    networks:
+      - amass
+    environment:
+      - GF_LOG_MODE=console
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    env_file:
+      - ./config/assetdb.env
+      - ./config/logs/syslog.env
+    configs:
+      - source: grafana_config
+        target: /etc/grafana/grafana.ini
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      loki:
+        condition: service_healthy
+      assetdb:
+        condition: service_healthy
+      syslog:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 3s
+      timeout: 2s
+      retries: 20
 
 networks:
   amass:
@@ -90,4 +175,12 @@ networks:
 
 configs:
   syslog_config:
-    file: ./config/syslog-ng.conf
+    file: ./config/logs/syslog-ng.conf
+  loki_config:
+    file: ./config/logs/loki.yaml
+  promtail_config:
+    file: ./config/logs/promtail.yaml
+  grafana_config:
+    file: ./config/grafana/grafana.ini
+  grafana_initdb:
+    file: ./config/grafana/grafana.sql
