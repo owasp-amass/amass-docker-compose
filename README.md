@@ -40,8 +40,13 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 * All persistent data used exists on your host in the local repo root directory.
 * The `assetdb` is a [PostgreSQL](https://github.com/postgres/postgres) database reachable from your localhost on port 5432.
 * Config files in the local repo are automatically mapped to where components expect to find them in the Docker environment.
-* Interact with the framework using the client program: `docker compose run --rm amass subs -summary -d owasp.org`
-* You can obtain information about Amass and your discoveries by accessing the web UI at the following URL: `http://127.0.0.1:3000`
+* Interact with the framework using the client program: `docker compose run --rm amass enum -d owasp.org`
+* You can obtain information about your asset discoveries by accessing the web UI at the following URL: `http://127.0.0.1:3000`
+
+### Utilize the IP2Location database
+
+* Download the `IP2LOCATION-LITE-DB11.CSV` and `IP2LOCATION-LITE-DB11.IPV6.CSV` files into the compose directory.
+* While the Amass Docker Compose is up, execute the `upload_ip2loc_data.sh` script to insert the data into the database.
 
 ## Corporate Supporters
 

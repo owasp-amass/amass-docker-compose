@@ -18,9 +18,9 @@ datasources:
   - name: IP2Location
     type: postgres
     url: assetdb:5432
-    user: ${AMASS_USER}
+    user: 'grafana'
     secureJsonData:
-      password: ${AMASS_PASSWORD}
+      password: 'grafana'
     jsonData:
       database: 'ip2location'
       sslmode: 'disable'
