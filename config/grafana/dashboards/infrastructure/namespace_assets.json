@@ -1,0 +1,638 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "PA8F69056563F1D7C"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unitScale": false
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "/^num$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "PA8F69056563F1D7C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) as num FROM assets WHERE type = 'FQDN' and content->>'name' IN (${subs})",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "FQDNs Discovered",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "PA8F69056563F1D7C"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 7
+              },
+              {
+                "color": "red",
+                "value": 14
+              }
+            ]
+          },
+          "unitScale": false
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 6,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "max"
+          ],
+          "fields": "/^interval$/",
+          "values": false
+        },
+        "showPercentChange": false,
+        "text": {},
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "PA8F69056563F1D7C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT extract(day from date_trunc('day', age(last_seen))) AS interval FROM assets WHERE type = 'FQDN' AND content->>'name' IN (${subs})",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Days of Staleness",
+      "transformations": [],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "a3e6ccbc-8122-49d5-8f8c-1e18d5efd2ce"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unitScale": true
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 18,
+        "w": 13,
+        "x": 11,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "basemap": {
+          "config": {},
+          "name": "Layer 0",
+          "type": "default"
+        },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showDebug": false,
+          "showMeasure": false,
+          "showScale": false,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": false,
+              "style": {
+                "color": {
+                  "fixed": "dark-green"
+                },
+                "opacity": 0.4,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "field": "Total",
+                  "fixed": 5,
+                  "max": 20,
+                  "min": 6
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "textConfig": {
+                  "fontSize": 12,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "name": "Assets",
+            "tooltip": false,
+            "type": "markers"
+          }
+        ],
+        "tooltip": {
+          "mode": "none"
+        },
+        "view": {
+          "allLayers": true,
+          "id": "zero",
+          "lat": 0,
+          "lon": 0,
+          "zoom": 1
+        }
+      },
+      "pluginVersion": "10.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "a3e6ccbc-8122-49d5-8f8c-1e18d5efd2ce"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ip_addr AS \"IP\", latitude AS \"Latitude\", longitude AS \"Longitude\" FROM batch_ip_geo('${addresses:csv}')",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Asset IP to Geo",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "reduceRow",
+            "reduce": {
+              "include": [
+                "IP"
+              ],
+              "reducer": "sum"
+            }
+          }
+        }
+      ],
+      "type": "geomap"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "PA8F69056563F1D7C"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unitScale": false
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 13,
+        "w": 11,
+        "x": 0,
+        "y": 5
+      },
+      "id": 1,
+      "options": {
+        "displayLabels": [
+          "name"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "limit": 0,
+          "values": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "PA8F69056563F1D7C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT fqdns.content->>'name' AS \"FQDN\", ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", asns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((((assets AS fqdns INNER JOIN relations AS rels1 ON fqdns.id = rels1.from_asset_id) INNER JOIN assets AS ips ON rels1.to_asset_id = ips.id) INNER JOIN relations AS rels2 ON ips.id = rels2.to_asset_id) INNER JOIN assets AS nets ON rels2.from_asset_id = nets.id) INNER JOIN relations AS rels3 ON nets.id = rels3.to_asset_id) INNER JOIN assets AS asns ON rels3.from_asset_id = asns.id) INNER JOIN relations AS rels4 ON asns.id = rels4.from_asset_id) INNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) WHERE rels1.type IN ('a_record', 'aaaa_record') AND rels2.type = 'contains' AND fqdns.type = 'FQDN' AND ips.type = 'IPAddress' AND nets.type = 'Netblock' AND rels3.type = 'announces' AND rels4.type = 'managed_by' AND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' AND rels2.last_seen > '${__from:date:iso}' AND rels2.last_seen < '${__to:date:iso}' AND rels3.last_seen > '${__from:date:iso}' AND rels3.last_seen < '${__to:date:iso}' AND rels4.last_seen > '${__from:date:iso}' AND rels4.last_seen < '${__to:date:iso}' AND fqdns.content->>'name' IN (${subs})",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Hosting Identification",
+      "transformations": [
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "FQDN": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "Organization": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "dns_name": {
+                "aggregations": [
+                  "count"
+                ],
+                "operation": "aggregate"
+              },
+              "org_name": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        }
+      ],
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "text",
+            "mode": "fixed"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "color-text"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unitScale": false
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 26,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 3,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": true,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "count"
+          ],
+          "show": true
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "10.3.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Dashboard --"
+          },
+          "panelId": 1,
+          "refId": "A"
+        }
+      ],
+      "title": "Assets to Internet Infrastructure",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "google.com"
+          ],
+          "value": [
+            "google.com"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "PA8F69056563F1D7C"
+        },
+        "definition": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT id, content->>'name' as name FROM assets WHERE type = 'FQDN' \nAND id IN (SELECT from_asset_id FROM relations WHERE type = 'node')) as zone \nINNER JOIN relations ON zone.id = relations.from_asset_id) \nWHERE relations.type = 'mx_record'",
+        "description": "Known registered domain names",
+        "hide": 0,
+        "includeAll": true,
+        "label": "domains",
+        "multi": true,
+        "name": "domains",
+        "options": [],
+        "query": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT id, content->>'name' as name FROM assets WHERE type = 'FQDN' \nAND id IN (SELECT from_asset_id FROM relations WHERE type = 'node')) as zone \nINNER JOIN relations ON zone.id = relations.from_asset_id) \nWHERE relations.type = 'mx_record'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "PA8F69056563F1D7C"
+        },
+        "definition": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS target ON relations.to_asset_id = target.id) \nWHERE fqdns.type = 'FQDN' AND target.type IN ('FQDN', 'IPAddress')\nAND relations.type IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'",
+        "description": "Subdomain names from the already selected domains variable",
+        "hide": 2,
+        "includeAll": true,
+        "multi": true,
+        "name": "subs",
+        "options": [],
+        "query": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS target ON relations.to_asset_id = target.id) \nWHERE fqdns.type = 'FQDN' AND target.type IN ('FQDN', 'IPAddress')\nAND relations.type IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "PA8F69056563F1D7C"
+        },
+        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS ips ON relations.to_asset_id = ips.id) \nWHERE fqdns.type = 'FQDN' AND ips.type = 'IPAddress' \nAND relations.type IN ('a_record', 'aaaa_record') \nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'\nAND fqdns.content->>'name' IN (${subs})",
+        "description": "IP addresses for the subdomains in scope",
+        "hide": 2,
+        "includeAll": true,
+        "multi": true,
+        "name": "addresses",
+        "options": [],
+        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS ips ON relations.to_asset_id = ips.id) \nWHERE fqdns.type = 'FQDN' AND ips.type = 'IPAddress' \nAND relations.type IN ('a_record', 'aaaa_record') \nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'\nAND fqdns.content->>'name' IN (${subs})",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Assets in Registered Namespaces",
+  "uid": "eca32783-7544-4ac1-8375-0cf012bcb3b3",
+  "version": 28,
+  "weekStart": ""
+}
