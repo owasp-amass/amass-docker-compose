@@ -1,3 +1,3 @@
 CREATE USER grafana WITH PASSWORD 'grafana';
-CREATE DATABASE IF NOT EXISTS grafana OWNER grafana;
-CREATE DATABASE IF NOT EXISTS ip2location OWNER grafana;
+CREATE DATABASE grafana OWNER grafana;
+CREATE DATABASE ip2location OWNER grafana;
