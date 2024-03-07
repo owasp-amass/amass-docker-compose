@@ -7,90 +7,115 @@ PGPASSWORD="grafana" psql -v ON_ERROR_STOP=1 -h localhost -U "grafana" --dbname 
     DECLARE
         _ip TEXT;
         _ips TEXT[];
+        _ip_inet INET;
+        _var_r RECORD;
         _ipdec DECIMAL(39,0);
-        var_r RECORD;
     BEGIN
-        _ips = string_to_array(\$1,',');
+        _ips = string_to_array(\$1, ',');
         
-        FOREACH _ip IN ARRAY _ips
-        LOOP 
-            IF family(_ip::inet) = 4 THEN
-                _ipdec = ipv4_to_decimal(_ip::inet);
-            ELSIF family(_ip::inet) = 6 THEN
-                _ipdec = ipv6_to_decimal(_ip::inet);
-            END;
+        FOREACH _ip IN ARRAY _ips LOOP 
+            _ipdec = 0;
+            _ip_inet = _ip::inet;
+            IF family(_ip_inet) = 4 THEN
+                _ipdec = ipv4_to_decimal(_ip_inet);
+            ELSIF family(_ip_inet) = 6 THEN
+                _ipdec = ipv6_to_decimal(_ip_inet);
+            END IF;
 
-            FOR var_r IN (
+            FOR _var_r IN (
                 WITH addr(ip_addr) AS (VALUES (_ip))
                 SELECT addr.ip_addr AS addr, geo.latitude AS "lat", geo.longitude AS "long" 
                 FROM (SELECT ip_geo.latitude, ip_geo.longitude FROM ip_geo 
-                WHERE _ipbig >= ip_from AND country_code != '-' 
+                WHERE _ipdec >= ip_from AND country_code != '-' 
                 ORDER BY ip_from DESC LIMIT 1) AS geo 
                 JOIN addr ON 1=1
-            ) 
-            LOOP ip_addr := var_r.addr;
-                latitude := var_r.lat;
-                longitude := var_r.long;
-            RETURN NEXT;
+            ) LOOP ip_addr := _var_r.addr;
+                latitude := _var_r.lat;
+                longitude := _var_r.long;
+                RETURN NEXT;
             END LOOP;
         END LOOP;
     END
-    \$BODY\$
-    LANGUAGE plpgsql;
+    \$BODY\$ LANGUAGE plpgsql IMMUTABLE STRICT;
 
-    CREATE OR REPLACE FUNCTION ipv4_to_decimal(inet) RETURNS DECIMAL(39,0) AS 
-    \$BODY\$ 
+    CREATE OR REPLACE FUNCTION ipv4_to_decimal(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
         SELECT \$1 - '0.0.0.0'::inet
-    \$BODY\$ 
-    LANGUAGE sql strict immutable;
+    \$BODY\$ LANGUAGE sql IMMUTABLE STRICT;
 
-    CREATE OR REPLACE FUNCTION ipv6_to_decimal(inet) RETURNS DECIMAL(39,0) AS
-    \$BODY\$ 
+    CREATE OR REPLACE FUNCTION ipv6_to_decimal(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
     DECLARE
-        _group TEXT;
         _groups TEXT[];
-        _ipbig BIGINT;
-        var_r RECORD;
+        _weight DECIMAL(39,0);
+        _ipnum DECIMAL(39,0) = 0;
     BEGIN
-        _groups = string_to_array(host(\$1),':');
-        
-        FOREACH _group IN ARRAY _groups
-        LOOP 
-            _ipbig = hex_to_bigint(_group);
-        END LOOP;
-    END
-    \$BODY\$ LANGUAGE plpgsql;
+        _groups = string_to_array(expand_ipv6(\$1), ':');
 
-    CREATE OR REPLACE FUNCTION ipv6_to_decimal(inet) RETURNS DECIMAL(39,0) AS
-    \$BODY\$ 
+        FOR i in 1..8 LOOP
+            _weight = 1;
+
+            IF i < 8 THEN
+                _weight = 65536 ^ (8 - i);
+            END IF;
+
+            _ipnum = _ipnum + (hex_to_bigint(_groups[i]) * _weight);
+        END LOOP;
+
+        RETURN _ipnum;
+    END
+    \$BODY\$ LANGUAGE plpgsql IMMUTABLE STRICT;
+
+    CREATE OR REPLACE FUNCTION expand_ipv6(inet) RETURNS TEXT AS \$BODY\$ 
     DECLARE
-        _group TEXT;
-        _groups TEXT[];
-        _ipbig BIGINT;
-        var_r RECORD;
+        _len1 INT;
+        _len2 INT;
+        _addr TEXT;
+        _missing INT;
+        _sides TEXT[];
+        _groups1 TEXT[];
+        _groups2 TEXT[];
     BEGIN
-        _groups = string_to_array(host(\$1),':');
-        
-        FOREACH _group IN ARRAY _groups
-        LOOP 
-            _ipbig = hex_to_bigint(_group);
-        END LOOP;
-    END
-    \$BODY\$ LANGUAGE plpgsql;
+        _addr = host(\$1);
+        _sides = string_to_array(_addr, '::');
 
-    CREATE OR REPLACE FUNCTION hex_to_bigint(hexval varchar) RETURNS bigint AS 
-    \$BODY\$
+        IF cardinality(_sides) = 2 THEN
+            _groups1 = string_to_array(_sides[1], ':');
+            _groups2 = string_to_array(_sides[2], ':');
+            _len1 = cardinality(_groups1);
+            _len2 = cardinality(_groups2);
+            _missing = (8 - _len1) - _len2;
+
+            IF _len1 > 0 THEN
+                _sides[1] = _sides[1] || ':';
+            END IF;
+
+            FOR i in 1.._missing LOOP
+                _sides[1] = _sides[1] || '0';
+                IF i < _missing THEN
+                    _sides[1] = _sides[1] || ':';
+                END IF;
+            END LOOP;
+
+            IF _len2 > 0 THEN
+                _sides[1] = _sides[1] || ':' || _sides[2];
+            END IF;
+
+            _addr = _sides[1];
+        END IF;
+
+        RETURN _addr;
+    END
+    \$BODY\$ LANGUAGE plpgsql IMMUTABLE STRICT;
+
+    CREATE OR REPLACE FUNCTION hex_to_bigint(hexval varchar) RETURNS BIGINT AS \$BODY\$
     DECLARE
-        result bigint;
+        result BIGINT;
     BEGIN
         EXECUTE 'SELECT x' || quote_literal(hexval) || '::bigint' INTO result;
         RETURN result;
     END;
-    \$BODY\$ 
-    LANGUAGE plpgsql IMMUTABLE STRICT;
+    \$BODY\$ LANGUAGE plpgsql IMMUTABLE STRICT;
 
-    GRANT execute ON FUNCTION inet_to_bigint(inet) TO public;
-
+    DROP TABLE IF EXISTS ip_geo;
     CREATE TABLE ip_geo (
         ip_from DECIMAL(39,0) NOT NULL,
         ip_to DECIMAL(39,0) NOT NULL,
