@@ -3,46 +3,42 @@ set -e
 
 # within the ip2location database, create the table, and insert data from the CSV files
 PGPASSWORD="grafana" psql -v ON_ERROR_STOP=1 -h localhost -U "grafana" --dbname ip2location <<-EOSQL
-    CREATE OR REPLACE FUNCTION batch_ip_geo(TEXT) RETURNS TABLE(ip_addr TEXT, latitude VARCHAR(20), longitude VARCHAR(20)) AS \$BODY\$ 
+    CREATE OR REPLACE FUNCTION batch_ip_geo(TEXT) RETURNS TABLE(ip_addr TEXT, city VARCHAR(128), latitude VARCHAR(20), longitude VARCHAR(20)) AS \$BODY\$ 
     DECLARE
         _ip TEXT;
         _ips TEXT[];
-        _ip_inet INET;
         _var_r RECORD;
-        _ipdec DECIMAL(39,0);
     BEGIN
         _ips = string_to_array(\$1, ',');
-        
-        FOREACH _ip IN ARRAY _ips LOOP 
-            _ipdec = 0;
-            _ip_inet = _ip::inet;
-            IF family(_ip_inet) = 4 THEN
-                _ipdec = ipv4_to_decimal(_ip_inet);
-            ELSIF family(_ip_inet) = 6 THEN
-                _ipdec = ipv6_to_decimal(_ip_inet);
-            END IF;
 
+        FOREACH _ip IN ARRAY _ips LOOP 
             FOR _var_r IN (
                 WITH addr(ip_addr) AS (VALUES (_ip))
-                SELECT addr.ip_addr AS addr, geo.latitude AS "lat", geo.longitude AS "long" 
-                FROM (SELECT ip_geo.latitude, ip_geo.longitude FROM ip_geo 
-                WHERE _ipdec >= ip_from AND country_code != '-' 
+                SELECT addr.ip_addr AS addr, geo.city_name AS "city", 
+                geo.latitude AS "lat", geo.longitude AS "long" 
+                FROM (SELECT ip_geo.city_name, ip_geo.latitude, ip_geo.longitude 
+                FROM ip_geo WHERE inet_to_num(_ip::inet) >= ip_from AND country_code != '-' 
                 ORDER BY ip_from DESC LIMIT 1) AS geo 
                 JOIN addr ON 1=1
-            ) LOOP ip_addr := _var_r.addr;
-                latitude := _var_r.lat;
-                longitude := _var_r.long;
+            ) LOOP ip_addr = _var_r.addr;
+                city = _var_r.city;
+                latitude = _var_r.lat;
+                longitude = _var_r.long;
                 RETURN NEXT;
             END LOOP;
         END LOOP;
     END
     \$BODY\$ LANGUAGE plpgsql IMMUTABLE STRICT;
 
-    CREATE OR REPLACE FUNCTION ipv4_to_decimal(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
-        SELECT \$1 - '0.0.0.0'::inet
+    CREATE OR REPLACE FUNCTION inet_to_num(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
+        SELECT \$1 - '0.0.0.0'::inet WHERE family(\$1) = 4 
+        UNION ALL
+        SELECT ipv6_to_num(\$1) WHERE family(\$1) = 6
+        UNION ALL
+        SELECT 0 WHERE family(\$1) != 4 AND family(\$1) != 6
     \$BODY\$ LANGUAGE sql IMMUTABLE STRICT;
 
-    CREATE OR REPLACE FUNCTION ipv6_to_decimal(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
+    CREATE OR REPLACE FUNCTION ipv6_to_num(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
     DECLARE
         _groups TEXT[];
         _weight DECIMAL(39,0);

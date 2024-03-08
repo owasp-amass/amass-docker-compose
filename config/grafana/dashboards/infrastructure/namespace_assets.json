@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 2,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -79,6 +79,64 @@
           "rawQuery": true,
           "rawSql": "SELECT COUNT(*) as num FROM assets WHERE type = 'FQDN' and content->>'name' IN (${subs})",
           "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "PA8F69056563F1D7C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT fqdn AS \"FQDN\", ip_addr AS \"IP Address\" FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}')",
+          "refId": "Names to Addrs",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "PA8F69056563F1D7C"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "hide": false,
+          "rawQuery": true,
+          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", \nasns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses})",
+          "refId": "Internet Numbers",
           "sql": {
             "columns": [
               {
@@ -196,7 +254,7 @@
     {
       "datasource": {
         "type": "grafana-postgresql-datasource",
-        "uid": "a3e6ccbc-8122-49d5-8f8c-1e18d5efd2ce"
+        "uid": "P8CF24AAA6D31E196"
       },
       "fieldConfig": {
         "defaults": {
@@ -220,7 +278,7 @@
               }
             ]
           },
-          "unitScale": true
+          "unitScale": false
         },
         "overrides": []
       },
@@ -263,8 +321,8 @@
                 "size": {
                   "field": "Total",
                   "fixed": 5,
-                  "max": 20,
-                  "min": 6
+                  "max": 10,
+                  "min": 4
                 },
                 "symbol": {
                   "fixed": "img/icons/marker/circle.svg",
@@ -273,6 +331,10 @@
                 "symbolAlign": {
                   "horizontal": "center",
                   "vertical": "center"
+                },
+                "text": {
+                  "fixed": "",
+                  "mode": "field"
                 },
                 "textConfig": {
                   "fontSize": 12,
@@ -284,19 +346,20 @@
               }
             },
             "name": "Assets",
-            "tooltip": false,
+            "tooltip": true,
             "type": "markers"
           }
         ],
         "tooltip": {
-          "mode": "none"
+          "mode": "details"
         },
         "view": {
           "allLayers": true,
-          "id": "zero",
+          "id": "fit",
           "lat": 0,
           "lon": 0,
-          "zoom": 1
+          "padding": 8,
+          "zoom": 15
         }
       },
       "pluginVersion": "10.3.3",
@@ -304,12 +367,12 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "a3e6ccbc-8122-49d5-8f8c-1e18d5efd2ce"
+            "uid": "P8CF24AAA6D31E196"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ip_addr AS \"IP\", latitude AS \"Latitude\", longitude AS \"Longitude\" FROM batch_ip_geo('${addresses:csv}')",
+          "rawSql": "SELECT city AS \"City\", latitude AS \"Latitude\", longitude AS \"Longitude\", count(ip_addr) AS \"Total\" \nFROM batch_ip_geo('${addresses:csv}') \nGROUP BY city, latitude, longitude",
           "refId": "A",
           "sql": {
             "columns": [
@@ -331,26 +394,13 @@
         }
       ],
       "title": "Asset IP to Geo",
-      "transformations": [
-        {
-          "id": "calculateField",
-          "options": {
-            "mode": "reduceRow",
-            "reduce": {
-              "include": [
-                "IP"
-              ],
-              "reducer": "sum"
-            }
-          }
-        }
-      ],
+      "transformations": [],
       "type": "geomap"
     },
     {
       "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "PA8F69056563F1D7C"
+        "type": "datasource",
+        "uid": "-- Dashboard --"
       },
       "fieldConfig": {
         "defaults": {
@@ -364,6 +414,7 @@
               "viz": false
             }
           },
+          "decimals": 2,
           "mappings": [],
           "unitScale": false
         },
@@ -391,7 +442,7 @@
         "pieType": "pie",
         "reduceOptions": {
           "calcs": [],
-          "fields": "",
+          "fields": "/^FQDN \\(distinctCount\\)$/",
           "limit": 0,
           "values": true
         },
@@ -403,56 +454,33 @@
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "PA8F69056563F1D7C"
+            "type": "datasource",
+            "uid": "-- Dashboard --"
           },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT fqdns.content->>'name' AS \"FQDN\", ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", asns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((((assets AS fqdns INNER JOIN relations AS rels1 ON fqdns.id = rels1.from_asset_id) INNER JOIN assets AS ips ON rels1.to_asset_id = ips.id) INNER JOIN relations AS rels2 ON ips.id = rels2.to_asset_id) INNER JOIN assets AS nets ON rels2.from_asset_id = nets.id) INNER JOIN relations AS rels3 ON nets.id = rels3.to_asset_id) INNER JOIN assets AS asns ON rels3.from_asset_id = asns.id) INNER JOIN relations AS rels4 ON asns.id = rels4.from_asset_id) INNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) WHERE rels1.type IN ('a_record', 'aaaa_record') AND rels2.type = 'contains' AND fqdns.type = 'FQDN' AND ips.type = 'IPAddress' AND nets.type = 'Netblock' AND rels3.type = 'announces' AND rels4.type = 'managed_by' AND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' AND rels2.last_seen > '${__from:date:iso}' AND rels2.last_seen < '${__to:date:iso}' AND rels3.last_seen > '${__from:date:iso}' AND rels3.last_seen < '${__to:date:iso}' AND rels4.last_seen > '${__from:date:iso}' AND rels4.last_seen < '${__to:date:iso}' AND fqdns.content->>'name' IN (${subs})",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "panelId": 2,
+          "refId": "A"
         }
       ],
       "title": "Hosting Identification",
       "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "IP Address",
+            "mode": "inner"
+          }
+        },
         {
           "id": "groupBy",
           "options": {
             "fields": {
               "FQDN": {
                 "aggregations": [
-                  "count"
+                  "distinctCount"
                 ],
                 "operation": "aggregate"
               },
               "Organization": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "dns_name": {
-                "aggregations": [
-                  "count"
-                ],
-                "operation": "aggregate"
-              },
-              "org_name": {
                 "aggregations": [],
                 "operation": "groupby"
               }
@@ -474,7 +502,7 @@
             "mode": "fixed"
           },
           "custom": {
-            "align": "auto",
+            "align": "center",
             "cellOptions": {
               "type": "color-text"
             },
@@ -496,7 +524,44 @@
           },
           "unitScale": false
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FQDN"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 227
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Netblock"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 206
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ASN"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 126
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 26,
@@ -516,7 +581,13 @@
           ],
           "show": true
         },
-        "showHeader": true
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "FQDN"
+          }
+        ]
       },
       "pluginVersion": "10.3.3",
       "targets": [
@@ -525,12 +596,60 @@
             "type": "datasource",
             "uid": "-- Dashboard --"
           },
-          "panelId": 1,
+          "panelId": 2,
           "refId": "A"
         }
       ],
       "title": "Assets to Internet Infrastructure",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "IP Address",
+            "mode": "inner"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "ASN": 3,
+              "FQDN": 0,
+              "IP Address": 1,
+              "Netblock": 2,
+              "Organization": 4
+            },
+            "renameByName": {}
+          }
+        }
+      ],
       "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P8CF24AAA6D31E196"
+      },
+      "gridPos": {
+        "h": 2,
+        "w": 6,
+        "x": 18,
+        "y": 44
+      },
+      "id": 6,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "The OWASP Amass Project uses the [IP2Location LITE](https://lite.ip2location.com) database for IP geolocation.",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.3.3",
+      "type": "text"
     }
   ],
   "refresh": "",
@@ -542,10 +661,10 @@
         "current": {
           "selected": false,
           "text": [
-            "google.com"
+            "utica.edu"
           ],
           "value": [
-            "google.com"
+            "utica.edu"
           ]
         },
         "datasource": {
@@ -609,14 +728,14 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS ips ON relations.to_asset_id = ips.id) \nWHERE fqdns.type = 'FQDN' AND ips.type = 'IPAddress' \nAND relations.type IN ('a_record', 'aaaa_record') \nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'\nAND fqdns.content->>'name' IN (${subs})",
+        "definition": "SELECT DISTINCT ip_addr FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}')",
         "description": "IP addresses for the subdomains in scope",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "addresses",
         "options": [],
-        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS ips ON relations.to_asset_id = ips.id) \nWHERE fqdns.type = 'FQDN' AND ips.type = 'IPAddress' \nAND relations.type IN ('a_record', 'aaaa_record') \nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'\nAND fqdns.content->>'name' IN (${subs})",
+        "query": "SELECT DISTINCT ip_addr FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}')",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -633,6 +752,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "eca32783-7544-4ac1-8375-0cf012bcb3b3",
-  "version": 28,
+  "version": 24,
   "weekStart": ""
 }
