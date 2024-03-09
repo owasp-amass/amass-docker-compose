@@ -30,14 +30,6 @@ PGPASSWORD="grafana" psql -v ON_ERROR_STOP=1 -h localhost -U "grafana" --dbname 
     END
     \$BODY\$ LANGUAGE plpgsql IMMUTABLE STRICT;
 
-    CREATE OR REPLACE FUNCTION inet_to_num(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
-        SELECT \$1 - '0.0.0.0'::inet WHERE family(\$1) = 4 
-        UNION ALL
-        SELECT ipv6_to_num(\$1) WHERE family(\$1) = 6
-        UNION ALL
-        SELECT 0 WHERE family(\$1) != 4 AND family(\$1) != 6
-    \$BODY\$ LANGUAGE sql IMMUTABLE STRICT;
-
     CREATE OR REPLACE FUNCTION ipv6_to_num(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
     DECLARE
         _groups TEXT[];
@@ -59,6 +51,14 @@ PGPASSWORD="grafana" psql -v ON_ERROR_STOP=1 -h localhost -U "grafana" --dbname 
         RETURN _ipnum;
     END
     \$BODY\$ LANGUAGE plpgsql IMMUTABLE STRICT;
+
+    CREATE OR REPLACE FUNCTION inet_to_num(inet) RETURNS DECIMAL(39,0) AS \$BODY\$ 
+        SELECT \$1 - '0.0.0.0'::inet WHERE family(\$1) = 4 
+        UNION ALL
+        SELECT ipv6_to_num(\$1) WHERE family(\$1) = 6
+        UNION ALL
+        SELECT 0 WHERE family(\$1) != 4 AND family(\$1) != 6
+    \$BODY\$ LANGUAGE sql IMMUTABLE STRICT;
 
     CREATE OR REPLACE FUNCTION expand_ipv6(inet) RETURNS TEXT AS \$BODY\$ 
     DECLARE
