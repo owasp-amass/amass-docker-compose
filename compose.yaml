@@ -144,6 +144,7 @@ services:
     environment:
       - GF_LOG_MODE=console
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_FEATURE_TOGGLES_ENABLE=transformationsVariableSupport
     env_file:
       - ./config/assetdb.env
       - ./config/logs/syslog.env
