@@ -276,7 +276,7 @@
           },
           "links": [
             {
-              "title": "Filter",
+              "title": "Show in table",
               "url": "/d/${__dashboard.uid}﻿﻿/﻿﻿${__dashboard}﻿﻿?﻿${domains:queryparam}﻿&﻿${subs:queryparam}﻿&﻿${addresses:queryparam}&${organizations:queryparam}﻿&﻿${geoips:queryparam}﻿&﻿${fqdns:queryparam}﻿&﻿${ips:queryparam}﻿&﻿${cidrs:queryparam}﻿&﻿${asns:queryparam}﻿&﻿${orgs:queryparam}﻿&var-geocity=${__data.fields.City}"
             }
           ],
@@ -344,7 +344,7 @@
                   "mode": "mod"
                 },
                 "size": {
-                  "field": "IP Count",
+                  "field": "IP Addresses",
                   "fixed": 5,
                   "max": 10,
                   "min": 4
@@ -452,7 +452,7 @@
             "includeByName": {},
             "indexByName": {},
             "renameByName": {
-              "IP Address (distinctCount)": "IP Count",
+              "IP Address (distinctCount)": "IP Addresses",
               "IP Address (uniqueValues)": "IP List"
             }
           }
@@ -464,8 +464,8 @@
               "names": [
                 "City",
                 "Latitude",
-                "IP Count",
-                "Longitude"
+                "Longitude",
+                "IP Addresses"
               ]
             }
           }
@@ -787,10 +787,14 @@
         "current": {
           "selected": true,
           "text": [
-            "All"
+            "mvcc.edu",
+            "suny.edu",
+            "owasp.org"
           ],
           "value": [
-            "$__all"
+            "mvcc.edu",
+            "suny.edu",
+            "owasp.org"
           ]
         },
         "datasource": {
@@ -800,7 +804,7 @@
         "definition": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT id, content->>'name' as name FROM assets WHERE type = 'FQDN' \nAND id IN (SELECT from_asset_id FROM relations WHERE type = 'node')) as zone \nINNER JOIN relations ON zone.id = relations.from_asset_id) \nWHERE relations.type = 'mx_record'",
         "description": "Known registered domain names",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": "Namespaces",
         "multi": true,
         "name": "domains",
@@ -923,33 +927,49 @@
         "type": "query"
       },
       {
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "PA8F69056563F1D7C"
+        },
+        "definition": "select ''",
         "hide": 2,
         "includeAll": false,
         "multi": false,
         "name": "geocity",
         "options": [],
-        "query": "",
+        "query": "select ''",
+        "refresh": 1,
+        "regex": "",
         "skipUrlSync": false,
-        "type": "custom"
+        "sort": 0,
+        "type": "query"
       },
       {
         "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "P8CF24AAA6D31E196"
         },
-        "definition": "SELECT ip_addr FROM batch_ip_geo('${addresses:csv}') WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
+        "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "geolist",
         "options": [],
-        "query": "SELECT ip_addr FROM batch_ip_geo('${addresses:csv}') WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
+        "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -1053,6 +1073,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "b0c23905-8d43-499b-b2b3-ffd2e6fc4007",
-  "version": 56,
+  "version": 12,
   "weekStart": ""
 }
