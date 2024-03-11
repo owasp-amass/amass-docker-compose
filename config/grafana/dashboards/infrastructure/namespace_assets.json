@@ -787,14 +787,10 @@
         "current": {
           "selected": true,
           "text": [
-            "mvcc.edu",
-            "suny.edu",
-            "owasp.org"
+            "sunysccc.edu"
           ],
           "value": [
-            "mvcc.edu",
-            "suny.edu",
-            "owasp.org"
+            "sunysccc.edu"
           ]
         },
         "datasource": {
@@ -963,13 +959,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "P8CF24AAA6D31E196"
         },
-        "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
+        "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) ",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "geolist",
         "options": [],
-        "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
+        "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) ",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -1073,6 +1069,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "b0c23905-8d43-499b-b2b3-ffd2e6fc4007",
-  "version": 12,
+  "version": 2,
   "weekStart": ""
 }
