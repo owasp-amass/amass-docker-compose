@@ -48,13 +48,12 @@ services:
     volumes:
       - ./assetdb:/var/lib/postgresql/data:rw
     environment:
-      - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
     env_file:
       - ./config/assetdb.env
     configs:
       - source: grafana_initdb
-        target: /docker-entrypoint-initdb.d/2_grafanadb.sql
+        target: /usr/share/postgresql/2_grafanadb.sh
     ports:
       - "5432:5432"
     deploy:
@@ -63,6 +62,13 @@ services:
       resources:
         reservations:
           memory: 128M
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        cp /usr/share/postgresql/2_grafanadb.sh /docker-entrypoint-initdb.d/2_grafanadb.sh
+        chmod +x /docker-entrypoint-initdb.d/2_grafanadb.sh
+        /usr/local/bin/docker-entrypoint.sh postgres
 
   syslog:
     image: balabit/syslog-ng:latest
@@ -184,4 +190,4 @@ configs:
   grafana_config:
     file: ./config/grafana/grafana.ini
   grafana_initdb:
-    file: ./config/grafana/grafana.sql
+    file: ./config/grafana/initdb_grafana.sh
