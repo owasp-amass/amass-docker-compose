@@ -787,10 +787,10 @@
         "current": {
           "selected": true,
           "text": [
-            "sunysccc.edu"
+            "utica.edu"
           ],
           "value": [
-            "sunysccc.edu"
+            "utica.edu"
           ]
         },
         "datasource": {
@@ -959,13 +959,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "P8CF24AAA6D31E196"
         },
-        "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) ",
+        "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "geolist",
         "options": [],
-        "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) ",
+        "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
