@@ -41,8 +41,7 @@
                 "value": null
               }
             ]
-          },
-          "unitScale": false
+          }
         },
         "overrides": []
       },
@@ -56,7 +55,7 @@
       "links": [
         {
           "title": "All Assets",
-          "url": "/d/${__dashboard.uid}﻿/﻿${__dashboard}﻿?${domains:queryparam}&${subs:queryparam}&${addresses:queryparam}&${organizations:queryparam}&${geoips:queryparam}&${geolist:queryparam}&var-geocity=&var-fqdns=&var-ips=&var-cidrs=&var-asns=&var-orgs="
+          "url": "/d/${__dashboard.uid}﻿/﻿${__dashboard}﻿?${domains:queryparam}&${subs:queryparam}&${addresses:queryparam}&${geoips:queryparam}&${geolist:queryparam}&var-geocity=&var-organizations=All"
         }
       ],
       "options": {
@@ -73,7 +72,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.3.3",
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
@@ -112,7 +111,7 @@
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT fqdn AS \"FQDN\", ip_addr AS \"IP Address\" \nFROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}') \nWHERE fqdn SIMILAR TO '%${fqdns:regex}%'",
+          "rawSql": "SELECT fqdn AS \"FQDN\", ip_addr AS \"IP Address\" \nFROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}')",
           "refId": "Names to Addrs",
           "sql": {
             "columns": [
@@ -141,7 +140,7 @@
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", \nasns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' SIMILAR TO '%${ips:regex}%' \nAND nets.content->>'cidr' SIMILAR TO '%${cidrs:regex}%' \nAND asns.content->>'number' SIMILAR TO '%${asns:regex}%' \nAND orgs.content->>'name' SIMILAR TO '%${orgs:regex}%' \nAND orgs.content->>'name' IN (${organizations}) AND ips.content->>'address' IN (${geolist})",
+          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", \nasns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND orgs.content->>'name' IN (${organizations}) AND ips.content->>'address' IN (${geolist})",
           "refId": "Internet Numbers",
           "sql": {
             "columns": [
@@ -163,7 +162,6 @@
         }
       ],
       "title": "FQDNs Discovered",
-      "transformations": [],
       "type": "stat"
     },
     {
@@ -193,8 +191,7 @@
                 "value": 14
               }
             ]
-          },
-          "unitScale": false
+          }
         },
         "overrides": []
       },
@@ -222,7 +219,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.3.3",
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
@@ -254,7 +251,6 @@
         }
       ],
       "title": "Days of Staleness",
-      "transformations": [],
       "type": "stat"
     },
     {
@@ -277,7 +273,7 @@
           "links": [
             {
               "title": "Show in table",
-              "url": "/d/${__dashboard.uid}﻿﻿/﻿﻿${__dashboard}﻿﻿?﻿${domains:queryparam}﻿&﻿${subs:queryparam}﻿&﻿${addresses:queryparam}&${organizations:queryparam}﻿&﻿${geoips:queryparam}﻿&﻿${fqdns:queryparam}﻿&﻿${ips:queryparam}﻿&﻿${cidrs:queryparam}﻿&﻿${asns:queryparam}﻿&﻿${orgs:queryparam}﻿&var-geocity=${__data.fields.City}"
+              "url": "/d/${__dashboard.uid}﻿﻿/﻿﻿${__dashboard}﻿﻿?﻿${domains:queryparam}﻿&﻿${subs:queryparam}﻿&﻿${addresses:queryparam}&${organizations:queryparam}﻿&﻿${geoips:queryparam}﻿&var-geocity=${__data.fields.City}"
             }
           ],
           "mappings": [],
@@ -301,8 +297,7 @@
                 "value": 30
               }
             ]
-          },
-          "unitScale": false
+          }
         },
         "overrides": []
       },
@@ -387,7 +382,7 @@
           "zoom": 15
         }
       },
-      "pluginVersion": "10.3.3",
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
@@ -495,11 +490,10 @@
           "links": [
             {
               "title": "Select Slice",
-              "url": "/d/${__dashboard.uid}﻿﻿/﻿﻿${__dashboard}﻿﻿?﻿${domains:queryparam}﻿&﻿${subs:queryparam}﻿&﻿${addresses:queryparam}﻿&${organizations:queryparam}&﻿${geoips:queryparam}&${geolist:queryparam}﻿&${fqdns:queryparam}﻿&${ips:queryparam}﻿&${cidrs:queryparam}﻿&${asns:queryparam}﻿&﻿var-orgs=${__data.fields.Organization}&var-geocity="
+              "url": "/d/${__dashboard.uid}﻿﻿/﻿﻿${__dashboard}﻿﻿?﻿${domains:queryparam}﻿&﻿${subs:queryparam}﻿&﻿${addresses:queryparam}﻿&﻿${geoips:queryparam}&${geolist:queryparam}﻿﻿&﻿var-organizations=${__data.fields.Organization}&var-geocity="
             }
           ],
-          "mappings": [],
-          "unitScale": false
+          "mappings": []
         },
         "overrides": [
           {
@@ -538,7 +532,7 @@
       "links": [
         {
           "title": "All Organizations",
-          "url": "/d/${__dashboard.uid}﻿﻿/﻿﻿${__dashboard}﻿﻿?﻿${domains:queryparam}﻿&﻿${subs:queryparam}﻿&﻿${addresses:queryparam}&${organizations:queryparam}﻿&﻿${geoips:queryparam}&${geolist:queryparam}﻿&${fqdns:queryparam}﻿&${ips:queryparam}﻿&${cidrs:queryparam}﻿&${asns:queryparam}﻿&﻿var-orgs=&var-geocity="
+          "url": "/d/${__dashboard.uid}﻿﻿/﻿﻿${__dashboard}﻿﻿?﻿${domains:queryparam}﻿&﻿${subs:queryparam}﻿&﻿${addresses:queryparam}&﻿${geoips:queryparam}&${geolist:queryparam}﻿&var-geocity=&var-organizations=All"
         }
       ],
       "options": {
@@ -633,6 +627,7 @@
             "cellOptions": {
               "type": "color-text"
             },
+            "filterable": true,
             "inspect": false
           },
           "mappings": [],
@@ -648,8 +643,7 @@
                 "value": 80
               }
             ]
-          },
-          "unitScale": false
+          }
         },
         "overrides": [
           {
@@ -716,7 +710,7 @@
           }
         ]
       },
-      "pluginVersion": "10.3.3",
+      "pluginVersion": "10.4.0",
       "targets": [
         {
           "datasource": {
@@ -774,7 +768,7 @@
         "content": "The OWASP Amass Project uses the [IP2Location LITE](https://lite.ip2location.com) database for IP geolocation.",
         "mode": "markdown"
       },
-      "pluginVersion": "10.3.3",
+      "pluginVersion": "10.4.0",
       "type": "text"
     }
   ],
@@ -909,13 +903,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' SIMILAR TO '%${ips:regex}%'  \nAND nets.content->>'cidr' SIMILAR TO '%${cidrs:regex}%' \nAND asns.content->>'number' SIMILAR TO '%${asns:regex}%' \nAND orgs.content->>'name' SIMILAR TO '%${orgs:regex}%' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations})",
+        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations})",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "geoips",
         "options": [],
-        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' SIMILAR TO '%${ips:regex}%'  \nAND nets.content->>'cidr' SIMILAR TO '%${cidrs:regex}%' \nAND asns.content->>'number' SIMILAR TO '%${asns:regex}%' \nAND orgs.content->>'name' SIMILAR TO '%${orgs:regex}%' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations})",
+        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations})",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -971,93 +965,6 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
-      },
-      {
-        "current": {
-          "selected": true,
-          "text": "",
-          "value": ""
-        },
-        "description": "Variable that filters FQDNs",
-        "hide": 0,
-        "label": "FQDNs",
-        "name": "fqdns",
-        "options": [
-          {
-            "selected": true,
-            "text": "",
-            "value": ""
-          }
-        ],
-        "query": "",
-        "skipUrlSync": false,
-        "type": "textbox"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "",
-          "value": ""
-        },
-        "description": "Variable for filtering IP addresses",
-        "hide": 0,
-        "label": "IP Addresses",
-        "name": "ips",
-        "options": [],
-        "query": "",
-        "skipUrlSync": false,
-        "type": "textbox"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "",
-          "value": ""
-        },
-        "description": "Variable for filtering netblocks",
-        "hide": 0,
-        "label": "Netblocks",
-        "name": "cidrs",
-        "options": [],
-        "query": "",
-        "skipUrlSync": false,
-        "type": "textbox"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "",
-          "value": ""
-        },
-        "description": "Variable for filtering ASNs",
-        "hide": 0,
-        "label": "ASNs",
-        "name": "asns",
-        "options": [],
-        "query": "",
-        "skipUrlSync": false,
-        "type": "textbox"
-      },
-      {
-        "current": {
-          "selected": false,
-          "text": "",
-          "value": ""
-        },
-        "description": "Variable for filtering RIR organizations",
-        "hide": 0,
-        "label": "Organizations",
-        "name": "orgs",
-        "options": [
-          {
-            "selected": true,
-            "text": "",
-            "value": ""
-          }
-        ],
-        "query": "",
-        "skipUrlSync": false,
-        "type": "textbox"
       }
     ]
   },
@@ -1069,6 +976,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "b0c23905-8d43-499b-b2b3-ffd2e6fc4007",
-  "version": 2,
+  "version": 10,
   "weekStart": ""
 }
