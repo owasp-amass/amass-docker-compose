@@ -140,7 +140,7 @@
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", \nasns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND orgs.content->>'name' IN (${organizations}) AND ips.content->>'address' IN (${geolist})",
+          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", \nasns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND orgs.content->>'name' IN (${organizations}) AND ips.content->>'address' IN (${geolist}) \nUNION \nSELECT '0' AS \"IP Address\", '-' AS \"Netblock\", '0' AS \"ASN\", '-' AS \"Organization\"",
           "refId": "Internet Numbers",
           "sql": {
             "columns": [
@@ -781,10 +781,10 @@
         "current": {
           "selected": true,
           "text": [
-            "utica.edu"
+            "owasp.org"
           ],
           "value": [
-            "utica.edu"
+            "owasp.org"
           ]
         },
         "datasource": {
@@ -848,14 +848,14 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT DISTINCT ip_addr FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}')",
+        "definition": "SELECT DISTINCT ip_addr FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}') \nUNION \nSELECT '0.0.0.0' AS ip_addr",
         "description": "IP addresses for the subdomains in scope",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "addresses",
         "options": [],
-        "query": "SELECT DISTINCT ip_addr FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}')",
+        "query": "SELECT DISTINCT ip_addr FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}') \nUNION \nSELECT '0.0.0.0' AS ip_addr",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -876,13 +876,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses})",
+        "definition": "SELECT orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nUNION \nSELECT '-' AS \"Organization\"",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "organizations",
         "options": [],
-        "query": "SELECT orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses})",
+        "query": "SELECT orgs.content->>'name' AS \"Organization\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nUNION \nSELECT '-' AS \"Organization\"",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -903,13 +903,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations})",
+        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "geoips",
         "options": [],
-        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations})",
+        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.to_asset_id) \nINNER JOIN assets AS asns ON rels2.from_asset_id = asns.id) \nINNER JOIN relations AS rels3 ON asns.id = rels3.from_asset_id) \nINNER JOIN assets AS orgs ON rels3.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'announces' AND rels3.type = 'managed_by' \nAND orgs.type = 'RIROrg' AND asns.type = 'ASN' AND nets.type = 'Netblock' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -976,6 +976,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "b0c23905-8d43-499b-b2b3-ffd2e6fc4007",
-  "version": 10,
+  "version": 3,
   "weekStart": ""
 }
