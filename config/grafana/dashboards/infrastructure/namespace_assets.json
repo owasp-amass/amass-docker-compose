@@ -772,7 +772,7 @@
       "type": "text"
     }
   ],
-  "refresh": "",
+  "refresh": "1m",
   "schemaVersion": 39,
   "tags": [],
   "templating": {
@@ -800,7 +800,7 @@
         "name": "domains",
         "options": [],
         "query": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT id, content->>'name' as name FROM assets WHERE type = 'FQDN' \nAND id IN (SELECT from_asset_id FROM relations WHERE type = 'node')) as zone \nINNER JOIN relations ON zone.id = relations.from_asset_id) \nWHERE relations.type = 'mx_record'",
-        "refresh": 1,
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
@@ -820,14 +820,14 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS target ON relations.to_asset_id = target.id) \nWHERE fqdns.type = 'FQDN' AND target.type IN ('FQDN', 'IPAddress')\nAND relations.type IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'",
+        "definition": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS target ON relations.to_asset_id = target.id) \nWHERE fqdns.type = 'FQDN' AND target.type IN ('FQDN', 'IPAddress')\nAND relations.type IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}' \nUNION \nSELECT '-' AS \"FQDN\"",
         "description": "Subdomain names from the already selected domains variable",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "subs",
         "options": [],
-        "query": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS target ON relations.to_asset_id = target.id) \nWHERE fqdns.type = 'FQDN' AND target.type IN ('FQDN', 'IPAddress')\nAND relations.type IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}'",
+        "query": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((assets AS fqdns \nINNER JOIN relations ON fqdns.id = relations.from_asset_id) \nINNER JOIN assets AS target ON relations.to_asset_id = target.id) \nWHERE fqdns.type = 'FQDN' AND target.type IN ('FQDN', 'IPAddress')\nAND relations.type IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND relations.last_seen > '${__from:date:iso}' AND relations.last_seen < '${__to:date:iso}' \nUNION \nSELECT '-' AS \"FQDN\"",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -976,6 +976,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "b0c23905-8d43-499b-b2b3-ffd2e6fc4007",
-  "version": 3,
+  "version": 7,
   "weekStart": ""
 }
