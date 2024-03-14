@@ -34,14 +34,6 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 2. Type the following to get started: `docker compose run --rm amass enum -d owasp.org`
 3. If the build process times out, simply execute the command again to resume.
 
-### Update the Images from GitHub Repositories
-
-1. Be sure you have an up-to-date version of Docker or Docker Desktop on your system.
-2. Make the local repo your current working directory: `cd amass-docker-compose`
-3. Shutdown the Amass framework within the Docker environment: `docker compose down`
-4. Update components from their GitHub repos: `docker compose build --pull --no-cache`
-5. Your Amass framework is now up-to-date with the latest changes to the project.
-
 ### Details about the Docker Environment
 
 * All persistent data used exists on your host in the local repo root directory.
@@ -55,6 +47,22 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 * Go to the [IP2Location LITE](https://lite.ip2location.com/) site and sign up for a free account.
 * Download the `IP2LOCATION-LITE-DB11.CSV` and `IP2LOCATION-LITE-DB11.IPV6.CSV` files and copy them into the compose directory.
 * While the Amass Docker Compose is up, execute the `upload_ip2loc_data.sh` script to insert the geo information into the database.
+
+### Update Process for the Compose Environment
+
+1. Make the local repo your current working directory: `cd amass-docker-compose`
+2. Shutdown the Amass framework within the Docker environment: `docker compose down`
+3. Backup the `config/assetdb.env`, `config/config.yaml`, and `config/datasources.yaml` files.
+4. Backup the following directories: `assetdb`, `data`, and `logs`
+5. Update the compose local repo with the following command: `git pull origin master`
+6. Restore the files and directories backed up in Steps 3 and 4.
+
+### Update Process for the Images
+
+1. Make the local repo your current working directory: `cd amass-docker-compose`
+2. Shutdown the Amass framework within the Docker environment: `docker compose down`
+3. Update components from their GitHub repos: `docker compose build --pull --no-cache`
+4. Your Amass framework is now up-to-date with the latest changes to the project.
 
 ## Corporate Supporters
 
