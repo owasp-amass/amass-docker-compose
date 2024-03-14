@@ -15,17 +15,24 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 
 ## Docker Compose Setup Instructions
 
-### Configure and Build Images
+### Install the Compose Directory
 
 1. Be sure you have an up-to-date version of Docker or Docker Desktop on your system.
 2. Clone this repo: `git clone https://github.com/owasp-amass/amass-docker-compose.git`
 3. Optional: you may want to rename the directory to something smaller (e.g. `amass`)
 4. Make the local repo your current working directory: `cd amass-docker-compose`
-5. Recommended: open the `config/assetdb.env` file and assign a new POSTGRES_PASSWORD and AMASS_PASSWORD. Save. **This cannot be performed after you start the Docker Compose and the database has been created.**
-6. Make desired changes to the `config.yaml` file, being sure to replace the password field of the `database` value with the password you assigned as your AMASS_PASSWORD. Save.
-7. Optional: update your `datasources.yaml` file by uncommenting data sources and adding account credentials.
-8. Your Amass framework is now configured and ready to be built. Docker Compose will build the required images and start them correctly when you perform your first `amass` command execution.
-9. Type the following to get started: `docker compose run --rm amass enum -d owasp.org`
+
+### Configure the Compose Environment
+
+1. Recommended: open the `config/assetdb.env` file and assign a new POSTGRES_PASSWORD and AMASS_PASSWORD. Save. **This cannot be performed after you start the Docker Compose and the database has been created.**
+2. Make desired changes to the `config.yaml` file, being sure to replace the password field of the `database` value with the password you assigned as your AMASS_PASSWORD. Save.
+3. Optional: update your `datasources.yaml` file by uncommenting data sources and adding account credentials.
+
+### Build the Docker Images
+
+1. Your Amass framework is now configured and ready to be built. Docker Compose will build the required images and start them correctly when you perform your first `amass` command execution.
+2. Type the following to get started: `docker compose run --rm amass enum -d owasp.org`
+3. If the build process times out, simply execute the command again to resume.
 
 ### Update the Images from GitHub Repositories
 
@@ -45,8 +52,9 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 
 ### Utilize the IP2Location database
 
-* Download the `IP2LOCATION-LITE-DB11.CSV` and `IP2LOCATION-LITE-DB11.IPV6.CSV` files into the compose directory.
-* While the Amass Docker Compose is up, execute the `upload_ip2loc_data.sh` script to insert the data into the database.
+* Go to the [IP2Location LITE](https://lite.ip2location.com/) site and sign up for a free account.
+* Download the `IP2LOCATION-LITE-DB11.CSV` and `IP2LOCATION-LITE-DB11.IPV6.CSV` files and copy them into the compose directory.
+* While the Amass Docker Compose is up, execute the `upload_ip2loc_data.sh` script to insert the geo information into the database.
 
 ## Corporate Supporters
 
