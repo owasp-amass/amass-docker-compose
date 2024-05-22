@@ -7,7 +7,7 @@ services:
       - ./config/logs/syslog.env
     volumes:
       - ./config:/.config/amass:rw
-      - ./data:/data:rw
+      - ./data:/data:rw,z
     depends_on:
       engine:
         condition: service_healthy
@@ -20,7 +20,7 @@ services:
     env_file:
       - ./config/logs/syslog.env
     volumes:
-      - ./data:/.config/amass:rw
+      - ./data:/.config/amass:rw,z
     expose: 
       - "4000"
     deploy:
@@ -107,7 +107,7 @@ services:
       - source: loki_config
         target: /etc/loki/local-config.yaml
     volumes:
-      - ./logs:/loki:rw
+      - ./logs:/loki:rw,z
     expose:
       - "3100/tcp"
     deploy:
