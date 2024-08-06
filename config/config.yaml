@@ -35,7 +35,8 @@ options:
 
 transformations:
   FQDN->FQDN:
-  FQDN->IPAddress: 
+  FQDN->IPAddress:
+  FQDN->EmailAddress:
   IPAddress->FQDN:
   IPAddress->Netblock:
   IPAddress->ASN:
@@ -43,3 +44,4 @@ transformations:
   Netblock->ALL:
   ASN->ALL:
   RIROrg->ALL:
+  EmailAddress->EmailAddress:
