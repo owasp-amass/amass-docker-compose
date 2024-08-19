@@ -42,6 +42,7 @@ services:
 
   assetdb:
     build: https://github.com/owasp-amass/asset-db.git#master
+    shm_size: '4gb'
     container_name: assetdb
     networks:
       - amass
@@ -61,7 +62,7 @@ services:
         condition: any
       resources:
         reservations:
-          memory: 128M
+          memory: 512M
     entrypoint:
       - sh
       - -euc
