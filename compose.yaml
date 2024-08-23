@@ -17,6 +17,9 @@ services:
     container_name: engine
     networks:
       - amass
+    environment:
+      - POSTAL_SERVER_HOST=postal
+      - POSTAL_SERVER_PORT=8000
     env_file:
       - ./config/logs/syslog.env
     volumes:
@@ -34,6 +37,8 @@ services:
           memory: 1024M
     depends_on:
       assetdb:
+        condition: service_healthy
+      postal:
         condition: service_healthy
       syslog:
         condition: service_healthy
@@ -70,6 +75,33 @@ services:
         cp /usr/share/postgresql/2_grafanadb.sh /docker-entrypoint-initdb.d/2_grafanadb.sh
         chmod +x /docker-entrypoint-initdb.d/2_grafanadb.sh
         /usr/local/bin/docker-entrypoint.sh postgres
+
+  postal:
+    image: ghcr.io/le0pard/postal_server:latest
+    container_name: postal
+    networks:
+      - amass
+    env_file:
+      - ./config/logs/syslog.env
+    expose: 
+      - "8000"
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 5
+        window: 360s
+      resources:
+        reservations:
+          memory: 2048M
+    depends_on:
+      syslog:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://postal:8000/health" ]
+      interval: 3s
+      timeout: 2s
+      retries: 20
 
   syslog:
     image: balabit/syslog-ng:latest
@@ -115,7 +147,7 @@ services:
       restart_policy:
         condition: any
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://loki:3100/ready || exit 1" ]
       interval: 3s
       timeout: 2s
       retries: 20
@@ -171,7 +203,7 @@ services:
       syslog:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://grafana:3000/api/health || exit 1" ]
       interval: 3s
       timeout: 2s
       retries: 20
