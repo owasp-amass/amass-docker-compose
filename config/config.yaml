@@ -33,14 +33,19 @@ options:
     enabled: false
     wordlists: # wordlist(s) to use that are specific to name alterations
       - "./wordlists/alterations.txt"
-  confidence: 50 # default confidence level for all transformations unless otherwise specified
+  default_transform_values: # default, global values for transformations, if not specified in the transformation.
+    ttl: 10080 # default is 1440
+    confidence: 30 # default is 50
+    priority: 5 # default global priority is 5 (assuming its 1-10)
 
 transformations:
   FQDN->ALL:
+  FQDN->DNS:
+    ttl: 1440
   IPAddress->ALL:
   Netblock->ALL:
-  ASN->ALL:
-  RIROrg->ALL:
+  AutonomousSystem->ALL:
+  AutnumRecord->ALL:
   SocketAddress->ALL:
   ContactRecord->ALL:
   Organization->ALL:
@@ -49,7 +54,6 @@ transformations:
   Phone->ALL:
   Person->ALL:
   DomainRecord->ALL:
-  Registrar->ALL:
   Fingerprint->ALL:
   URL->ALL:
   TLSCertificate->ALL:
