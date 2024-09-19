@@ -12,8 +12,10 @@ scope:
   ports: # ports to be used when actively scanning services
     - 80
     - 443
+    - 8000
     - 8080
     - 8443
+    - 8888
 #  blacklist: # subdomains to be blacklisted
 #    - example.owasp.org
 options:
