@@ -42,10 +42,12 @@ transformations:
   FQDN->ALL:
   FQDN->DNS:
     ttl: 1440
+  NetworkEndpoint->ALL:
   IPAddress->ALL:
   Netblock->ALL:
   AutonomousSystem->ALL:
   AutnumRecord->ALL:
+  IPNetRecord->ALL:
   SocketAddress->ALL:
   ContactRecord->ALL:
   Organization->ALL:
@@ -57,3 +59,4 @@ transformations:
   Fingerprint->ALL:
   URL->ALL:
   TLSCertificate->ALL:
+  Service->ALL:

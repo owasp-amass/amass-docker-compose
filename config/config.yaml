@@ -49,6 +49,7 @@ transformations:
   Netblock->ALL:
   AutonomousSystem->ALL:
   AutnumRecord->ALL:
+  IPNetRecord->ALL:
   SocketAddress->ALL:
   ContactRecord->ALL:
   Organization->ALL:
