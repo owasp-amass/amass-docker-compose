@@ -74,7 +74,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.1.4",
       "targets": [
         {
           "datasource": {
@@ -222,7 +222,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.1.4",
       "targets": [
         {
           "datasource": {
@@ -385,7 +385,7 @@
           "zoom": 15
         }
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.1.4",
       "targets": [
         {
           "datasource": {
@@ -473,7 +473,6 @@
     },
     {
       "datasource": {
-        "default": true,
         "type": "grafana-postgresql-datasource",
         "uid": "PA8F69056563F1D7C"
       },
@@ -574,7 +573,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.from_asset_id) \nINNER JOIN assets AS rdap ON rels2.to_asset_id = rdap.id) \nINNER JOIN relations AS rels3 ON rdap.id = rels3.from_asset_id) \nINNER JOIN assets AS contact ON rels3.to_asset_id = contact.id) \nINNER JOIN relations AS rels4 ON rels4.from_asset_id = contact.id) \nINNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) \nWHERE ips.type = 'IPAddress' AND nets.type = 'Netblock' \nAND rdap.type = 'IPNetRecord' AND contact.type = 'ContactRecord' AND orgs.type = 'Organization' \nAND rels1.type = 'contains' AND rels2.type = 'registration' \nAND rels3.type = 'registrant' AND rels4.type = 'organization' \nAND ips.content->>'address' IN (${addresses}) \nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}'",
+          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.from_asset_id) \nINNER JOIN assets AS rdap ON rels2.to_asset_id = rdap.id) \nINNER JOIN relations AS rels3 ON rdap.id = rels3.from_asset_id) \nINNER JOIN assets AS contact ON rels3.to_asset_id = contact.id) \nINNER JOIN relations AS rels4 ON rels4.from_asset_id = contact.id) \nINNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) \nWHERE ips.type = 'IPAddress' AND nets.type = 'Netblock' \nAND rdap.type = 'IPNetRecord' AND contact.type = 'ContactRecord' AND orgs.type = 'Organization' \nAND rels1.type = 'contains' AND rels2.type = 'registration' \nAND rels3.type = 'registrant' AND rels4.type = 'organization' \nAND ips.content->>'address' IN (${addresses}) \nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nGROUP BY ips.content->>'address'",
           "refId": "A",
           "sql": {
             "columns": [
@@ -716,7 +715,7 @@
           }
         ]
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.1.4",
       "targets": [
         {
           "datasource": {
@@ -787,10 +786,10 @@
         "current": {
           "selected": true,
           "text": [
-            "mvcc.edu"
+            "google.com"
           ],
           "value": [
-            "mvcc.edu"
+            "google.com"
           ]
         },
         "datasource": {
@@ -882,13 +881,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT orgs.content->>'name' AS \"Organization\" \nFROM ((((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.from_asset_id) \nINNER JOIN assets AS rdap ON rels2.to_asset_id = rdap.id) \nINNER JOIN relations AS rels3 ON rdap.id = rels3.from_asset_id) \nINNER JOIN assets AS contact ON rels3.to_asset_id = contact.id) \nINNER JOIN relations AS rels4 ON contact.id = rels4.from_asset_id) \nINNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'registration' AND rels3.type = 'registrant' AND rels4.type = 'organization' \nAND rdap.type = 'IPNetRecord' AND contact.type = 'ContactRecord' AND orgs.type = 'Organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nUNION \nSELECT '-' AS \"Organization\"",
+        "definition": "SELECT string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.from_asset_id) \nINNER JOIN assets AS rdap ON rels2.to_asset_id = rdap.id) \nINNER JOIN relations AS rels3 ON rdap.id = rels3.from_asset_id) \nINNER JOIN assets AS contact ON rels3.to_asset_id = contact.id) \nINNER JOIN relations AS rels4 ON contact.id = rels4.from_asset_id) \nINNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'registration' AND rels3.type = 'registrant' AND rels4.type = 'organization' \nAND rdap.type = 'IPNetRecord' AND contact.type = 'ContactRecord' AND orgs.type = 'Organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nGROUP BY ips.content->>'address' \nUNION \nSELECT '-' AS \"Organization\"",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "organizations",
         "options": [],
-        "query": "SELECT orgs.content->>'name' AS \"Organization\" \nFROM ((((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.from_asset_id) \nINNER JOIN assets AS rdap ON rels2.to_asset_id = rdap.id) \nINNER JOIN relations AS rels3 ON rdap.id = rels3.from_asset_id) \nINNER JOIN assets AS contact ON rels3.to_asset_id = contact.id) \nINNER JOIN relations AS rels4 ON contact.id = rels4.from_asset_id) \nINNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'registration' AND rels3.type = 'registrant' AND rels4.type = 'organization' \nAND rdap.type = 'IPNetRecord' AND contact.type = 'ContactRecord' AND orgs.type = 'Organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nUNION \nSELECT '-' AS \"Organization\"",
+        "query": "SELECT string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((assets AS ips  \nINNER JOIN relations AS rels1 ON ips.id = rels1.to_asset_id) \nINNER JOIN assets AS nets ON rels1.from_asset_id = nets.id) \nINNER JOIN relations AS rels2 ON nets.id = rels2.from_asset_id) \nINNER JOIN assets AS rdap ON rels2.to_asset_id = rdap.id) \nINNER JOIN relations AS rels3 ON rdap.id = rels3.from_asset_id) \nINNER JOIN assets AS contact ON rels3.to_asset_id = contact.id) \nINNER JOIN relations AS rels4 ON contact.id = rels4.from_asset_id) \nINNER JOIN assets AS orgs ON rels4.to_asset_id = orgs.id) \nWHERE rels1.type = 'contains' AND ips.type = 'IPAddress' \nAND nets.type = 'Netblock' AND rels2.type = 'registration' AND rels3.type = 'registrant' AND rels4.type = 'organization' \nAND rdap.type = 'IPNetRecord' AND contact.type = 'ContactRecord' AND orgs.type = 'Organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nGROUP BY ips.content->>'address' \nUNION \nSELECT '-' AS \"Organization\"",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -982,6 +981,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "b0c23905-8d43-499b-b2b3-ffd2e6fc4007",
-  "version": 6,
+  "version": 4,
   "weekStart": ""
 }
