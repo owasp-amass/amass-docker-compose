@@ -30,11 +30,3 @@ datasources:
       connMaxLifetime: 14400
       postgresVersion: 1000
       timescaledb: false
-  - name: Loki
-    type: loki
-    access: proxy
-    url: http://loki:3100
-    jsonData:
-      httpHeaderName1: "X-Scope-OrgID"
-    secureJsonData:
-      httpHeaderValue1: "tenant1"
