@@ -11,6 +11,8 @@ services:
     depends_on:
       engine:
         condition: service_healthy
+      syslog:
+        condition: service_healthy
 
   engine:
     build: https://github.com/owasp-amass/engine.git#develop
@@ -104,19 +106,21 @@ services:
       retries: 20
 
   syslog:
-    image: balabit/syslog-ng:latest
+    image: lscr.io/linuxserver/syslog-ng:latest
     container_name: syslog
     networks:
       - amass
     environment:
+      - PUID=1000
+      - PGID=1000
       - TZ=Etc/UTC
-    configs:
-      - source: syslog_config
-        target: /etc/syslog-ng/syslog-ng.conf
     volumes:
+      - ./config/logs:/config
       - ./logs:/var/log:rw
     expose:
       - "5514/udp"
+      - "6601/tcp"
+      - "6514/tcp"
     deploy:
       restart_policy:
         condition: any
@@ -163,8 +167,6 @@ networks:
     name: amass-net
 
 configs:
-  syslog_config:
-    file: ./config/logs/syslog-ng.conf
   grafana_config:
     file: ./config/grafana/grafana.ini
   grafana_initdb:
