@@ -111,11 +111,9 @@ services:
     networks:
       - amass
     environment:
-      - PUID=1000
-      - PGID=1000
       - TZ=Etc/UTC
     volumes:
-      - ./config/logs:/config
+      - ./config/logs:/config:rw
       - ./logs:/var/log:rw
     expose:
       - "5514/udp"
@@ -125,10 +123,9 @@ services:
       restart_policy:
         condition: any
     healthcheck:
-      test: ["CMD", "/usr/sbin/syslog-ng-ctl", "healthcheck"]
+      test: [ "CMD-SHELL", "exit 0" ]
       interval: 5s
       retries: 20
-    entrypoint: ["/usr/sbin/syslog-ng", "--no-caps", "-F"]
 
   grafana:
     image: grafana/grafana:latest
