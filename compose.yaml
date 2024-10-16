@@ -14,9 +14,58 @@ services:
       syslog:
         condition: service_healthy
 
+  viz:
+    build: https://github.com/owasp-amass/amass.git#develop
+    networks:
+      - amass
+    env_file:
+      - ./config/logs/syslog.env
+    volumes:
+      - ./config:/.config/amass:rw
+      - ./data/viz:/data:rw
+    depends_on:
+      assetdb:
+        condition: service_healthy
+      syslog:
+        condition: service_healthy
+    entrypoint: /bin/viz
+
+  subs:
+    build: https://github.com/owasp-amass/amass.git#develop
+    networks:
+      - amass
+    env_file:
+      - ./config/logs/syslog.env
+    volumes:
+      - ./config:/.config/amass:rw
+      - ./data/subs:/data:rw
+    depends_on:
+      assetdb:
+        condition: service_healthy
+      syslog:
+        condition: service_healthy
+    entrypoint: /bin/subs
+
+  track:
+    build: https://github.com/owasp-amass/amass.git#develop
+    networks:
+      - amass
+    env_file:
+      - ./config/logs/syslog.env
+    volumes:
+      - ./config:/.config/amass:rw
+      - ./data/track:/data:rw
+    depends_on:
+      assetdb:
+        condition: service_healthy
+      syslog:
+        condition: service_healthy
+    entrypoint: /bin/track
+
   engine:
-    build: https://github.com/owasp-amass/engine.git#develop
+    build: https://github.com/owasp-amass/amass.git#develop
     container_name: engine
+    working_dir: /.config/amass
     networks:
       - amass
     environment:
@@ -46,6 +95,12 @@ services:
         condition: service_healthy
       grafana:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "ae_isready", "--host", "127.0.0.1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 25
+    entrypoint: /bin/engine
 
   assetdb:
     build: https://github.com/owasp-amass/asset-db.git#master
