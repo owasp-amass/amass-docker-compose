@@ -1,1 +1,0 @@
-The data directory much exist, and allow read / write permissions for all users, in order for successful startup of the compose.
