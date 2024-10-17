@@ -1,6 +1,6 @@
 services:
   amass:
-    build: https://github.com/owasp-amass/amass.git#develop
+    image: owaspamass/amass:latest
     networks:
       - amass
     env_file:
@@ -15,7 +15,7 @@ services:
         condition: service_healthy
 
   viz:
-    build: https://github.com/owasp-amass/amass.git#develop
+    image: owaspamass/amass:latest
     networks:
       - amass
     env_file:
@@ -31,7 +31,7 @@ services:
     entrypoint: /bin/viz
 
   subs:
-    build: https://github.com/owasp-amass/amass.git#develop
+    image: owaspamass/amass:latest
     networks:
       - amass
     env_file:
@@ -47,7 +47,7 @@ services:
     entrypoint: /bin/subs
 
   track:
-    build: https://github.com/owasp-amass/amass.git#develop
+    image: owaspamass/amass:latest
     networks:
       - amass
     env_file:
@@ -63,7 +63,7 @@ services:
     entrypoint: /bin/track
 
   engine:
-    build: https://github.com/owasp-amass/amass.git#develop
+    image: owaspamass/amass:latest
     container_name: engine
     working_dir: /.config/amass
     networks:
