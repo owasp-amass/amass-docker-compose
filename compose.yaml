@@ -118,7 +118,7 @@ services:
       - source: grafana_initdb
         target: /usr/share/postgresql/2_grafanadb.sh
     ports:
-      - "5432:5432"
+      - "55432:5432"
     deploy:
       restart_policy:
         condition: any
