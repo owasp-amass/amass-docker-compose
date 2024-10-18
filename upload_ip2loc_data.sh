@@ -4,7 +4,7 @@ set -e
 eval $(grep -v -e '^#' ./config/assetdb.env | xargs -I {} echo export \'{}\')
 
 # insert data from the CSV files within the ip2location database
-PGPASSWORD=$AMASS_PASSWORD psql -v ON_ERROR_STOP=1 -h localhost -U "$AMASS_USER" --dbname ip2location <<-EOSQL
+PGPASSWORD=$AMASS_PASSWORD psql -v ON_ERROR_STOP=1 -h localhost -p 55432 -U "$AMASS_USER" --dbname ip2location <<-EOSQL
     DROP TABLE IF EXISTS ip_geo;
     CREATE TABLE ip_geo (
         ip_from DECIMAL(39,0) NOT NULL,

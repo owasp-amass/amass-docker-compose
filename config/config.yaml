@@ -37,7 +37,7 @@ options:
       - "./wordlists/alterations.txt"
   default_transform_values: # default, global values for transformations, if not specified in the transformation.
     ttl: 10080 # default is 1440
-    confidence: 30 # default is 50
+    confidence: 50 # default is 50
     priority: 5 # default global priority is 5 (assuming its 1-10)
 
 transformations:

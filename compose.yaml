@@ -46,6 +46,22 @@ services:
         condition: service_healthy
     entrypoint: /bin/subs
 
+  assoc:
+    image: owaspamass/amass:latest
+    networks:
+      - amass
+    env_file:
+      - ./config/logs/syslog.env
+    volumes:
+      - ./config:/.config/amass:rw
+      - ./data/assoc:/data:rw
+    depends_on:
+      assetdb:
+        condition: service_healthy
+      syslog:
+        condition: service_healthy
+    entrypoint: /bin/assoc
+
   track:
     image: owaspamass/amass:latest
     networks:
