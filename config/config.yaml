@@ -44,13 +44,11 @@ transformations:
   FQDN->ALL:
   FQDN->DNS:
     ttl: 1440
-  NetworkEndpoint->ALL:
   IPAddress->ALL:
   Netblock->ALL:
   AutonomousSystem->ALL:
   AutnumRecord->ALL:
   IPNetRecord->ALL:
-  SocketAddress->ALL:
   ContactRecord->ALL:
   Organization->ALL:
   Location->ALL:
@@ -58,7 +56,6 @@ transformations:
   Phone->ALL:
   Person->ALL:
   DomainRecord->ALL:
-  Fingerprint->ALL:
   URL->ALL:
   TLSCertificate->ALL:
   Service->ALL:
