@@ -18,13 +18,11 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 3,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
-        "default": true,
         "type": "grafana-postgresql-datasource",
         "uid": "PA8F69056563F1D7C"
       },
@@ -74,12 +72,12 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.1.4",
+      "pluginVersion": "11.3.1",
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "PA8F69056563F1D7C"
+            "uid": "${DS_ASSET_DATABASE}"
           },
           "editorMode": "code",
           "format": "table",
@@ -107,7 +105,7 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "PA8F69056563F1D7C"
+            "uid": "${DS_ASSET_DATABASE}"
           },
           "editorMode": "code",
           "format": "table",
@@ -136,13 +134,13 @@
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "PA8F69056563F1D7C"
+            "uid": "${DS_ASSET_DATABASE}"
           },
           "editorMode": "code",
           "format": "table",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", \nasns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.id) \nINNER JOIN edges AS rels2 ON nets.id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.id) \nINNER JOIN edges AS rels3 ON rdap.id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.id) \nINNER JOIN edges AS rels4 ON contact.id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.id) \nINNER JOIN edges AS rels5 ON nets.id = rels5.to_entity_id) \nINNER JOIN entities AS asns ON rels5.from_entity_id = asns.id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization' AND asns.etype = 'AutonomousSystem' \nAND rels1.etype = 'contains' AND rels2.etype = 'registration' AND rels3.etype = 'registrant' \nAND rels4.etype = 'organization' AND rels5.etype = 'announces'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND rels5.last_seen >= '${__from:date:iso}' AND rels5.last_seen <= '${__to:date:iso}' \nAND orgs.content->>'name' IN (${organizations}) AND ips.content->>'address' IN (${geolist}) \nUNION \nSELECT '0' AS \"IP Address\", '-' AS \"Netblock\", '0' AS \"ASN\", '-' AS \"Organization\"",
+          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", nets.content->>'cidr' AS \"Netblock\", \nasns.content->>'number' AS \"ASN\", orgs.content->>'name' AS \"Organization\" \nFROM ((((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON contact.entity_id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nINNER JOIN edges AS rels5 ON nets.entity_id = rels5.to_entity_id) \nINNER JOIN entities AS asns ON rels5.from_entity_id = asns.entity_id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization' AND asns.etype = 'AutonomousSystem' \nAND rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' \nAND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' \nAND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' \nAND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization' \nAND rels5.etype = 'SimpleRelation' AND rels5.content->>'label' = 'announces' \nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}' \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nAND rels5.updated_at >= '${__from:date:iso}' AND rels5.updated_at <= '${__to:date:iso}' \nAND orgs.content->>'name' IN (${organizations}) AND ips.content->>'address' IN (${geolist}) \nUNION \nSELECT '0' AS \"IP Address\", '-' AS \"Netblock\", '0' AS \"ASN\", '-' AS \"Organization\"",
           "refId": "Internet Numbers",
           "sql": {
             "columns": [
@@ -222,17 +220,17 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.1.4",
+      "pluginVersion": "11.3.1",
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "PA8F69056563F1D7C"
+            "uid": "${DS_ASSET_DATABASE}"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT extract(day from date_trunc('day', age(last_seen))) AS interval FROM entities WHERE etype = 'FQDN' AND content->>'name' IN (${subs})",
+          "rawSql": "SELECT extract(day from date_trunc('day', age(updated_at))) AS interval FROM entities WHERE etype = 'FQDN' AND content->>'name' IN (${subs})",
           "refId": "A",
           "sql": {
             "columns": [
@@ -385,7 +383,7 @@
           "zoom": 15
         }
       },
-      "pluginVersion": "11.1.4",
+      "pluginVersion": "11.3.1",
       "targets": [
         {
           "datasource": {
@@ -416,6 +414,7 @@
           }
         }
       ],
+      "title": "",
       "transformations": [
         {
           "id": "groupBy",
@@ -564,16 +563,17 @@
           "sort": "none"
         }
       },
+      "pluginVersion": "11.3.1",
       "targets": [
         {
           "datasource": {
             "type": "grafana-postgresql-datasource",
-            "uid": "PA8F69056563F1D7C"
+            "uid": "${DS_ASSET_DATABASE}"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.id) \nINNER JOIN edges AS rels2 ON nets.id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.id) \nINNER JOIN edges AS rels3 ON rdap.id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.id) \nINNER JOIN edges AS rels4 ON rels4.from_entity_id = contact.id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' \nAND rdap.etype = 'IPNetRecord' AND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization' \nAND rels1.etype = 'contains' AND rels2.etype = 'registration' \nAND rels3.etype = 'registrant' AND rels4.etype = 'organization' \nAND ips.content->>'address' IN (${addresses}) \nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nGROUP BY ips.content->>'address'",
+          "rawSql": "SELECT ips.content->>'address' AS \"IP Address\", string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((entities AS ips \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON rels4.from_entity_id = contact.entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization' \nAND rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' \nAND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' \nAND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' \nAND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization' \nAND ips.content->>'address' IN (${addresses}) \nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}' \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nGROUP BY ips.content->>'address'",
           "refId": "A",
           "sql": {
             "columns": [
@@ -715,7 +715,7 @@
           }
         ]
       },
-      "pluginVersion": "11.1.4",
+      "pluginVersion": "11.3.1",
       "targets": [
         {
           "datasource": {
@@ -726,6 +726,7 @@
           "refId": "A"
         }
       ],
+      "title": "",
       "transformations": [
         {
           "id": "joinByField",
@@ -753,9 +754,9 @@
       "type": "table"
     },
     {
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "P8CF24AAA6D31E196"
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
       },
       "gridPos": {
         "h": 2,
@@ -773,47 +774,45 @@
         "content": "The OWASP Amass Project uses the [IP2Location LITE](https://lite.ip2location.com) database for IP geolocation.",
         "mode": "markdown"
       },
-      "pluginVersion": "11.2.0",
+      "pluginVersion": "11.3.1",
+      "title": "",
       "type": "text"
     }
   ],
+  "preload": false,
   "refresh": "1m",
-  "schemaVersion": 39,
+  "schemaVersion": 40,
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
-          "selected": true,
           "text": [
-            "google.com"
+            "mvcc.edu"
           ],
           "value": [
-            "google.com"
+            "mvcc.edu"
           ]
         },
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT id, content->>'name' as name FROM entities WHERE etype = 'FQDN' \nAND id IN (SELECT from_entity_id FROM edges WHERE etype = 'node')) as zone \nINNER JOIN edges ON zone.id = edges.from_entity_id) \nWHERE edges.etype = 'mx_record'",
+        "definition": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT entity_id, content->>'name' as name FROM entities WHERE etype = 'FQDN' \nAND entity_id IN (SELECT from_entity_id FROM edges WHERE etype = 'SimpleRelation' AND content->>'label' = 'node')) as zone \nINNER JOIN edges ON zone.entity_id = edges.from_entity_id) \nWHERE edges.etype = 'PrefDNSRelation' AND edges.content->>'label' = 'dns_record' AND edges.content->'header'->'rr_type' = '15'",
         "description": "Known registered domain names",
-        "hide": 0,
         "includeAll": false,
         "label": "Namespaces",
         "multi": true,
         "name": "domains",
         "options": [],
-        "query": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT id, content->>'name' as name FROM entities WHERE etype = 'FQDN' \nAND id IN (SELECT from_entity_id FROM edges WHERE etype = 'node')) as zone \nINNER JOIN edges ON zone.id = edges.from_entity_id) \nWHERE edges.etype = 'mx_record'",
+        "query": "SELECT DISTINCT substring(zone.name from '(([a-zA-Z0-9]{1}|[_a-zA-Z0-9]{1}[_a-zA-Z0-9-]{0,61}[a-zA-Z0-9]{1})[.]{1}[a-zA-Z]{2,61}$)') AS name FROM ((SELECT entity_id, content->>'name' as name FROM entities WHERE etype = 'FQDN' \nAND entity_id IN (SELECT from_entity_id FROM edges WHERE etype = 'SimpleRelation' AND content->>'label' = 'node')) as zone \nINNER JOIN edges ON zone.entity_id = edges.from_entity_id) \nWHERE edges.etype = 'PrefDNSRelation' AND edges.content->>'label' = 'dns_record' AND edges.content->'header'->'rr_type' = '15'",
         "refresh": 2,
         "regex": "",
-        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       },
       {
         "current": {
-          "selected": true,
           "text": [
             "All"
           ],
@@ -825,23 +824,20 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((entities AS fqdns \nINNER JOIN edges ON fqdns.id = edges.from_entity_id) \nINNER JOIN entities AS target ON edges.to_entity_id = target.id) \nWHERE fqdns.etype = 'FQDN' AND target.etype IN ('FQDN', 'IPAddress')\nAND edges.etype IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND edges.last_seen > '${__from:date:iso}' AND edges.last_seen < '${__to:date:iso}' \nUNION \nSELECT '-' AS \"FQDN\"",
+        "definition": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((entities AS fqdns \nINNER JOIN edges ON fqdns.entity_id = edges.from_entity_id) \nINNER JOIN entities AS target ON edges.to_entity_id = target.entity_id) \nWHERE fqdns.etype = 'FQDN' AND target.etype IN ('FQDN', 'IPAddress')\nAND edges.etype = 'BasicDNSRelation' AND edges.content->>'label' = 'dns_record' AND edges.content->'header'->'rr_type' IN ('1', '28', '5') \nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}' \nAND edges.updated_at > '${__from:date:iso}' AND edges.updated_at < '${__to:date:iso}' \nUNION \nSELECT '-' AS \"FQDN\"",
         "description": "Subdomain names from the already selected domains variable",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "subs",
         "options": [],
-        "query": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((entities AS fqdns \nINNER JOIN edges ON fqdns.id = edges.from_entity_id) \nINNER JOIN entities AS target ON edges.to_entity_id = target.id) \nWHERE fqdns.etype = 'FQDN' AND target.etype IN ('FQDN', 'IPAddress')\nAND edges.etype IN ('a_record', 'aaaa_record', 'cname_record')\nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}'\nAND edges.last_seen > '${__from:date:iso}' AND edges.last_seen < '${__to:date:iso}' \nUNION \nSELECT '-' AS \"FQDN\"",
+        "query": "SELECT fqdns.content->>'name' AS \"FQDN\" FROM ((entities AS fqdns \nINNER JOIN edges ON fqdns.entity_id = edges.from_entity_id) \nINNER JOIN entities AS target ON edges.to_entity_id = target.entity_id) \nWHERE fqdns.etype = 'FQDN' AND target.etype IN ('FQDN', 'IPAddress')\nAND edges.etype = 'BasicDNSRelation' AND edges.content->>'label' = 'dns_record' AND edges.content->'header'->'rr_type' IN ('1', '28', '5') \nAND fqdns.content->>'name' SIMILAR TO '%${domains:regex}' \nAND edges.updated_at > '${__from:date:iso}' AND edges.updated_at < '${__to:date:iso}' \nUNION \nSELECT '-' AS \"FQDN\"",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       },
       {
         "current": {
-          "selected": true,
           "text": [
             "All"
           ],
@@ -863,13 +859,10 @@
         "query": "SELECT DISTINCT ip_addr FROM names_to_addrs('${subs:csv}', '${__from:date:iso}', '${__to:date:iso}') \nUNION \nSELECT '0.0.0.0' AS ip_addr",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       },
       {
         "current": {
-          "selected": true,
           "text": [
             "All"
           ],
@@ -881,22 +874,19 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.id) \nINNER JOIN edges AS rels2 ON nets.id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.id) \nINNER JOIN edges AS rels3 ON rdap.id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.id) \nINNER JOIN edges AS rels4 ON contact.id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.id) \nWHERE rels1.etype = 'contains' AND ips.etype = 'IPAddress' \nAND nets.etype = 'Netblock' AND rels2.etype = 'registration' AND rels3.etype = 'registrant' AND rels4.etype = 'organization' \nAND rdap.etype = 'IPNetRecord' AND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nGROUP BY ips.content->>'address' \nUNION \nSELECT '-' AS \"Organization\"",
+        "definition": "SELECT string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON contact.entity_id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nWHERE rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' AND ips.etype = 'IPAddress' \nAND nets.etype = 'Netblock' AND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' AND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' AND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization' \nAND rdap.etype = 'IPNetRecord' AND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}' \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nGROUP BY ips.content->>'address' \nUNION \nSELECT '-' AS \"Organization\"",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "organizations",
         "options": [],
-        "query": "SELECT string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.id) \nINNER JOIN edges AS rels2 ON nets.id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.id) \nINNER JOIN edges AS rels3 ON rdap.id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.id) \nINNER JOIN edges AS rels4 ON contact.id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.id) \nWHERE rels1.etype = 'contains' AND ips.etype = 'IPAddress' \nAND nets.etype = 'Netblock' AND rels2.etype = 'registration' AND rels3.etype = 'registrant' AND rels4.etype = 'organization' \nAND rdap.etype = 'IPNetRecord' AND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}' \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nGROUP BY ips.content->>'address' \nUNION \nSELECT '-' AS \"Organization\"",
+        "query": "SELECT string_agg(orgs.content->>'name', ' - ' ORDER BY orgs.content->>'name') AS \"Organization\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON contact.entity_id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nWHERE rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' AND ips.etype = 'IPAddress' \nAND nets.etype = 'Netblock' AND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' AND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' AND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization' \nAND rdap.etype = 'IPNetRecord' AND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}' \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nGROUP BY ips.content->>'address' \nUNION \nSELECT '-' AS \"Organization\"",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       },
       {
         "current": {
-          "selected": true,
           "text": [
             "All"
           ],
@@ -908,45 +898,30 @@
           "type": "grafana-postgresql-datasource",
           "uid": "PA8F69056563F1D7C"
         },
-        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.id) \nINNER JOIN edges AS rels2 ON nets.id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.id) \nINNER JOIN edges AS rels3 ON rdap.id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.id) \nINNER JOIN edges AS rels4 ON contact.id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.etype = 'contains' AND rels2.etype = 'registration' AND rels3.etype = 'registrant' \nAND rels4.etype = 'organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
+        "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON contact.entity_id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' AND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' AND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' \nAND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization'\nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}'  \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "geoips",
         "options": [],
-        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.id) \nINNER JOIN edges AS rels2 ON nets.id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.id) \nINNER JOIN edges AS rels3 ON rdap.id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.id) \nINNER JOIN edges AS rels4 ON contact.id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.etype = 'contains' AND rels2.etype = 'registration' AND rels3.etype = 'registrant' \nAND rels4.etype = 'organization'\nAND rels1.last_seen >= '${__from:date:iso}' AND rels1.last_seen <= '${__to:date:iso}' \nAND rels2.last_seen >= '${__from:date:iso}' AND rels2.last_seen <= '${__to:date:iso}' \nAND rels3.last_seen >= '${__from:date:iso}' AND rels3.last_seen <= '${__to:date:iso}'  \nAND rels4.last_seen >= '${__from:date:iso}' AND rels4.last_seen <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
+        "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON contact.entity_id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' AND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' AND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' \nAND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization'\nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}'  \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       },
       {
         "current": {
-          "selected": false,
-          "text": "",
-          "value": ""
+          "text": "Tokyo",
+          "value": "Tokyo"
         },
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "PA8F69056563F1D7C"
-        },
-        "definition": "select ''",
         "hide": 2,
-        "includeAll": false,
-        "multi": false,
         "name": "geocity",
         "options": [],
-        "query": "select ''",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
+        "query": "",
+        "type": "custom"
       },
       {
         "current": {
-          "selected": true,
           "text": [
             "All"
           ],
@@ -958,29 +933,27 @@
           "type": "grafana-postgresql-datasource",
           "uid": "P8CF24AAA6D31E196"
         },
-        "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
+        "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' UNION SELECT ip_addr FROM batch_ip_geo('${addresses:csv}') WHERE city = '${geocity:raw}'",
         "hide": 2,
         "includeAll": true,
         "multi": true,
         "name": "geolist",
         "options": [],
-        "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' \nUNION \nSELECT ip_addr FROM batch_ip_geo('${addresses:csv}') \nWHERE city = '${geocity:raw}'",
+        "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' UNION SELECT ip_addr FROM batch_ip_geo('${addresses:csv}') WHERE city = '${geocity:raw}'",
         "refresh": 1,
         "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
         "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-30d",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Assets in Registered Namespaces",
-  "uid": "b0c23905-8d43-499b-b2b3-ffd2e6fc4007",
-  "version": 4,
+  "uid": "ee5dtxeegr668b",
+  "version": 7,
   "weekStart": ""
 }
