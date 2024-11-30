@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 3,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -788,10 +788,10 @@
       {
         "current": {
           "text": [
-            "mvcc.edu"
+            "google.com"
           ],
           "value": [
-            "mvcc.edu"
+            "google.com"
           ]
         },
         "datasource": {
@@ -864,10 +864,10 @@
       {
         "current": {
           "text": [
-            "All"
+            "Google LLC"
           ],
           "value": [
-            "$__all"
+            "Google LLC"
           ]
         },
         "datasource": {
@@ -901,7 +901,6 @@
         "definition": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON contact.entity_id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' AND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' AND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' \nAND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization'\nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}'  \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
         "hide": 2,
         "includeAll": true,
-        "multi": true,
         "name": "geoips",
         "options": [],
         "query": "SELECT ips.content->>'address' AS \"IP Address\" \nFROM ((((((((entities AS ips  \nINNER JOIN edges AS rels1 ON ips.entity_id = rels1.to_entity_id) \nINNER JOIN entities AS nets ON rels1.from_entity_id = nets.entity_id) \nINNER JOIN edges AS rels2 ON nets.entity_id = rels2.from_entity_id) \nINNER JOIN entities AS rdap ON rels2.to_entity_id = rdap.entity_id) \nINNER JOIN edges AS rels3 ON rdap.entity_id = rels3.from_entity_id) \nINNER JOIN entities AS contact ON rels3.to_entity_id = contact.entity_id) \nINNER JOIN edges AS rels4 ON contact.entity_id = rels4.from_entity_id) \nINNER JOIN entities AS orgs ON rels4.to_entity_id = orgs.entity_id) \nWHERE ips.etype = 'IPAddress' AND nets.etype = 'Netblock' AND rdap.etype = 'IPNetRecord' \nAND contact.etype = 'ContactRecord' AND orgs.etype = 'Organization'\nAND rels1.etype = 'SimpleRelation' AND rels1.content->>'label' = 'contains' AND rels2.etype = 'SimpleRelation' AND rels2.content->>'label' = 'registration' AND rels3.etype = 'SimpleRelation' AND rels3.content->>'label' = 'registrant' \nAND rels4.etype = 'SimpleRelation' AND rels4.content->>'label' = 'organization'\nAND rels1.updated_at >= '${__from:date:iso}' AND rels1.updated_at <= '${__to:date:iso}' \nAND rels2.updated_at >= '${__from:date:iso}' AND rels2.updated_at <= '${__to:date:iso}' \nAND rels3.updated_at >= '${__from:date:iso}' AND rels3.updated_at <= '${__to:date:iso}'  \nAND rels4.updated_at >= '${__from:date:iso}' AND rels4.updated_at <= '${__to:date:iso}' \nAND ips.content->>'address' IN (${addresses}) \nAND orgs.content->>'name' IN (${organizations}) \nUNION \nSELECT '0.0.0.0' AS \"IP Address\"",
@@ -911,14 +910,22 @@
       },
       {
         "current": {
-          "text": "Tokyo",
-          "value": "Tokyo"
+          "text": "",
+          "value": ""
         },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "P8CF24AAA6D31E196"
+        },
+        "definition": "select ''",
         "hide": 2,
+        "includeAll": true,
         "name": "geocity",
         "options": [],
-        "query": "",
-        "type": "custom"
+        "query": "select ''",
+        "refresh": 1,
+        "regex": "",
+        "type": "query"
       },
       {
         "current": {
@@ -936,7 +943,6 @@
         "definition": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' UNION SELECT ip_addr FROM batch_ip_geo('${addresses:csv}') WHERE city = '${geocity:raw}'",
         "hide": 2,
         "includeAll": true,
-        "multi": true,
         "name": "geolist",
         "options": [],
         "query": "SELECT * FROM unnest(string_to_array('${addresses:csv}', ',')) WHERE '${geocity:raw}' = '' UNION SELECT ip_addr FROM batch_ip_geo('${addresses:csv}') WHERE city = '${geocity:raw}'",
@@ -954,6 +960,6 @@
   "timezone": "",
   "title": "Assets in Registered Namespaces",
   "uid": "ee5dtxeegr668b",
-  "version": 7,
+  "version": 4,
   "weekStart": ""
 }
