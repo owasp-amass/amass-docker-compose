@@ -1,6 +1,6 @@
 services:
   amass:
-    image: owaspamass/amass:latest
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -15,7 +15,7 @@ services:
         condition: service_healthy
 
   viz:
-    image: owaspamass/amass:latest
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -26,12 +26,14 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
+      neo4j:
+        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/viz
 
   subs:
-    image: owaspamass/amass:latest
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -42,12 +44,14 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
+      neo4j:
+        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/subs
 
   assoc:
-    image: owaspamass/amass:latest
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -58,12 +62,14 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
+      neo4j:
+        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/assoc
 
   track:
-    image: owaspamass/amass:latest
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -74,12 +80,14 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
+      neo4j:
+        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/track
 
   engine:
-    image: owaspamass/amass:latest
+    build: https://github.com/owasp-amass/amass.git#develop
     container_name: engine
     working_dir: /.config/amass
     networks:
@@ -105,6 +113,8 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
+      neo4j:
+        condition: service_healthy
       postal:
         condition: service_healthy
       syslog:
@@ -115,7 +125,7 @@ services:
       test: [ "CMD", "ae_isready", "--host", "127.0.0.1" ]
       interval: 10s
       timeout: 5s
-      retries: 25
+      retries: 5
     entrypoint: /bin/engine
 
   assetdb:
@@ -125,11 +135,13 @@ services:
     networks:
       - amass
     volumes:
-      - ./assetdb:/var/lib/postgresql/data:rw
+      - ./assetdb/postgres:/var/lib/postgresql/data:rw
     environment:
       - POSTGRES_USER=postgres
-    env_file:
-      - ./config/assetdb.env
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - AMASS_DB=${AMASS_DB}
+      - AMASS_USER=${AMASS_USER}
+      - AMASS_PASSWORD=${AMASS_PASSWORD}
     configs:
       - source: grafana_initdb
         target: /usr/share/postgresql/2_grafanadb.sh
@@ -148,6 +160,32 @@ services:
         cp /usr/share/postgresql/2_grafanadb.sh /docker-entrypoint-initdb.d/2_grafanadb.sh
         chmod +x /docker-entrypoint-initdb.d/2_grafanadb.sh
         /usr/local/bin/docker-entrypoint.sh postgres
+
+  neo4j:
+    image: neo4j:latest
+    container_name: neo4j
+    networks:
+      - amass
+    volumes:
+      - ./assetdb/neo4j:/data:rw
+    environment:
+      - NEO4J_AUTH=neo4j/${AMASS_PASSWORD}
+#      - NEO4J_server_memory_heap_initial__size=4G
+      - NEO4J_server_memory_heap_max__size=4G
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    deploy:
+      restart_policy:
+        condition: any
+      resources:
+        reservations:
+          memory: 2048M
+    healthcheck:
+      test: [ "CMD-SHELL", "exit 0" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postal:
     image: ghcr.io/le0pard/postal_server:latest
@@ -172,9 +210,9 @@ services:
         condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://postal:8000/health" ]
-      interval: 3s
-      timeout: 2s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   syslog:
     image: lscr.io/linuxserver/syslog-ng:latest
@@ -195,8 +233,9 @@ services:
         condition: any
     healthcheck:
       test: [ "CMD-SHELL", "exit 0" ]
-      interval: 5s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   grafana:
     image: grafana/grafana:latest
@@ -208,7 +247,6 @@ services:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
       - GF_FEATURE_TOGGLES_ENABLE=transformationsVariableSupport
     env_file:
-      - ./config/assetdb.env
       - ./config/logs/syslog.env
     configs:
       - source: grafana_config
@@ -221,13 +259,15 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
+      neo4j:
+        condition: service_healthy
       syslog:
         condition: service_healthy
     healthcheck:
       test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://grafana:3000/api/health || exit 1" ]
-      interval: 3s
-      timeout: 2s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   amass:
