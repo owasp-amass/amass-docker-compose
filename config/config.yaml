@@ -42,21 +42,26 @@ options:
     priority: 5 # default global priority is 5 (assuming its 1-10)
 
 transformations:
+  Account->ALL:
+  AutnumRecord->ALL:
+  AutonomousSystem->ALL:
+  ContactRecord->ALL:
+  DomainRecord->ALL:
+  File->ALL:
   FQDN->ALL:
   FQDN->DNS:
     ttl: 1440
+  FundsTransfer->ALL:
+  Identifier->ALL:
   IPAddress->ALL:
-  Netblock->ALL:
-  AutonomousSystem->ALL:
-  AutnumRecord->ALL:
   IPNetRecord->ALL:
-  ContactRecord->ALL:
-  Organization->ALL:
   Location->ALL:
-  EmailAddress->ALL:
-  Phone->ALL:
+  Netblock->ALL:
+  Organization->ALL:
   Person->ALL:
-  DomainRecord->ALL:
-  URL->ALL:
-  TLSCertificate->ALL:
+  Phone->ALL:
+  Product->ALL:
+  ProductRelease->ALL:
   Service->ALL:
+  TLSCertificate->ALL:
+  URL->ALL:
