@@ -246,6 +246,9 @@ services:
       - GF_LOG_MODE=console
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
       - GF_FEATURE_TOGGLES_ENABLE=transformationsVariableSupport
+      - AMASS_DB=${AMASS_DB}
+      - AMASS_USER=${AMASS_USER}
+      - AMASS_PASSWORD=${AMASS_PASSWORD}
     env_file:
       - ./config/logs/syslog.env
     configs:

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-eval $(grep -v -e '^#' ./config/assetdb.env | xargs -I {} echo export \'{}\')
+eval $(grep -v -e '^#' .env | xargs -I {} echo export \'{}\')
 
 # insert data from the CSV files within the ip2location database
 PGPASSWORD=$AMASS_PASSWORD psql -v ON_ERROR_STOP=1 -h localhost -p 55432 -U "$AMASS_USER" --dbname ip2location <<-EOSQL
