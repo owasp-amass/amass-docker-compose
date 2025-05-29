@@ -9,7 +9,7 @@ services:
       - ./config:/.config/amass:rw
       - ./data/amass:/data:rw
 
-   enum:
+  enum:
     build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
@@ -23,6 +23,7 @@ services:
         condition: service_healthy
       syslog:
         condition: service_healthy
+    entrypoint: /bin/enum
 
   viz:
     build: https://github.com/owasp-amass/amass.git#develop
@@ -129,8 +130,6 @@ services:
         condition: service_healthy
       syslog:
         condition: service_healthy
-      grafana:
-        condition: service_healthy
     healthcheck:
       test: [ "CMD", "ae_isready", "--host", "127.0.0.1" ]
       interval: 10s
@@ -152,9 +151,6 @@ services:
       - AMASS_DB=${AMASS_DB}
       - AMASS_USER=${AMASS_USER}
       - AMASS_PASSWORD=${AMASS_PASSWORD}
-    configs:
-      - source: grafana_initdb
-        target: /usr/share/postgresql/2_grafanadb.sh
     ports:
       - "55432:5432"
     deploy:
@@ -167,8 +163,6 @@ services:
       - sh
       - -euc
       - |
-        cp /usr/share/postgresql/2_grafanadb.sh /docker-entrypoint-initdb.d/2_grafanadb.sh
-        chmod +x /docker-entrypoint-initdb.d/2_grafanadb.sh
         /usr/local/bin/docker-entrypoint.sh postgres
 
   neo4j:
@@ -180,7 +174,6 @@ services:
       - ./assetdb/neo4j:/data:rw
     environment:
       - NEO4J_AUTH=neo4j/${AMASS_PASSWORD}
-#      - NEO4J_server_memory_heap_initial__size=4G
       - NEO4J_server_memory_heap_max__size=4G
     ports:
       - "7474:7474"
@@ -247,48 +240,7 @@ services:
       timeout: 5s
       retries: 5
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    networks:
-      - amass
-    environment:
-      - GF_LOG_MODE=console
-      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-      - GF_FEATURE_TOGGLES_ENABLE=transformationsVariableSupport
-      - AMASS_DB=${AMASS_DB}
-      - AMASS_USER=${AMASS_USER}
-      - AMASS_PASSWORD=${AMASS_PASSWORD}
-    env_file:
-      - ./config/logs/syslog.env
-    configs:
-      - source: grafana_config
-        target: /etc/grafana/grafana.ini
-    volumes:
-      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./config/grafana/dashboards:/var/lib/grafana/dashboards:ro
-    ports:
-      - "3000:3000"
-    depends_on:
-      assetdb:
-        condition: service_healthy
-      neo4j:
-        condition: service_healthy
-      syslog:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --no-verbose --timeout=2 --tries=1 --spider http://grafana:3000/api/health || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
 networks:
   amass:
     driver: bridge
     name: amass-net
-
-configs:
-  grafana_config:
-    file: ./config/grafana/grafana.ini
-  grafana_initdb:
-    file: ./config/grafana/initdb_grafana.sh

@@ -42,12 +42,6 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 * Interact with the framework using the client program: `docker compose run --rm amass enum -d owasp.org`
 * You can obtain information about your asset discoveries by accessing the web UI at the following URL: `http://127.0.0.1:3000`
 
-### Utilize the IP2Location database
-
-* Go to the [IP2Location LITE](https://lite.ip2location.com/) site and sign up for a free account.
-* Download the `IP2LOCATION-LITE-DB11.CSV` and `IP2LOCATION-LITE-DB11.IPV6.CSV` files and copy them into the compose directory.
-* While the Amass Docker Compose is up, execute the `upload_ip2loc_data.sh` script to insert the geo information into the database.
-
 ### Update Process for the Compose Environment
 
 1. Make the local repo your current working directory: `cd amass-docker-compose`
@@ -92,6 +86,6 @@ If you need help with installation and/or usage of the tool, please join our [Di
 
 ## Licensing [![License](https://img.shields.io/badge/license-apache%202-blue)](https://www.apache.org/licenses/LICENSE-2.0)
 
-This program is free software: you can redistribute it and/or modify it under the terms of the [Apache license](LICENSE). OWASP Amass and any contributions are Copyright © by Jeff Foley 2017-2024. Some subcomponents have separate licenses.
+This program is free software: you can redistribute it and/or modify it under the terms of the [Apache license](LICENSE). OWASP Amass and any contributions are Copyright © by Jeff Foley 2017-2025. Some subcomponents have separate licenses.
 
 ![Network graph](https://github.com/owasp-amass/amass/blob/master/images/network_06092018.png "Amass Network Mapping")
