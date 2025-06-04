@@ -1,14 +1,4 @@
 services:
-  amass:
-    build: https://github.com/owasp-amass/amass.git#develop
-    networks:
-      - amass
-    env_file:
-      - ./config/logs/syslog.env
-    volumes:
-      - ./config:/.config/amass:rw
-      - ./data/amass:/data:rw
-
   enum:
     build: https://github.com/owasp-amass/amass.git#develop
     networks:
