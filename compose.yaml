@@ -1,6 +1,6 @@
 services:
   enum:
-    build: https://github.com/owasp-amass/amass.git#develop
+    build: https://github.com/owasp-amass/amass.git#main
     networks:
       - amass
     env_file:
@@ -16,7 +16,7 @@ services:
     entrypoint: /bin/enum
 
   viz:
-    build: https://github.com/owasp-amass/amass.git#develop
+    build: https://github.com/owasp-amass/amass.git#main
     networks:
       - amass
     env_file:
@@ -34,7 +34,7 @@ services:
     entrypoint: /bin/viz
 
   subs:
-    build: https://github.com/owasp-amass/amass.git#develop
+    build: https://github.com/owasp-amass/amass.git#main
     networks:
       - amass
     env_file:
@@ -52,7 +52,7 @@ services:
     entrypoint: /bin/subs
 
   assoc:
-    build: https://github.com/owasp-amass/amass.git#develop
+    build: https://github.com/owasp-amass/amass.git#main
     networks:
       - amass
     env_file:
@@ -70,7 +70,7 @@ services:
     entrypoint: /bin/assoc
 
   track:
-    build: https://github.com/owasp-amass/amass.git#develop
+    build: https://github.com/owasp-amass/amass.git#main
     networks:
       - amass
     env_file:
@@ -88,7 +88,7 @@ services:
     entrypoint: /bin/track
 
   engine:
-    build: https://github.com/owasp-amass/amass.git#develop
+    build: https://github.com/owasp-amass/amass.git#main
     container_name: engine
     working_dir: /.config/amass
     networks:
@@ -128,7 +128,7 @@ services:
     entrypoint: /bin/engine
 
   assetdb:
-    build: https://github.com/owasp-amass/asset-db.git#master
+    build: https://github.com/owasp-amass/asset-db.git#main
     shm_size: '4gb'
     container_name: assetdb
     networks:
