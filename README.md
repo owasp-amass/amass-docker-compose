@@ -24,7 +24,7 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 
 ### Configure the Compose Environment
 
-1. Recommended: open the `config/assetdb.env` file and assign a new POSTGRES_PASSWORD and AMASS_PASSWORD. Save. **This cannot be performed after you start the Docker Compose and the database has been created.**
+1. Recommended: open the `.env` file and assign a new POSTGRES_PASSWORD and AMASS_PASSWORD. Save. **This cannot be performed after you start the Docker Compose and the database has been created.**
 2. Make desired changes to the `config.yaml` file, being sure to replace the password field of the `database` value with the password you assigned as your AMASS_PASSWORD. Save.
 3. Optional: update your `datasources.yaml` file by uncommenting data sources and adding account credentials.
 
@@ -46,7 +46,7 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 
 1. Make the local repo your current working directory: `cd amass-docker-compose`
 2. Shutdown the Amass framework within the Docker environment: `docker compose down`
-3. Backup the `config/assetdb.env`, `config/config.yaml`, and `config/datasources.yaml` files.
+3. Backup the `.env`, `config/config.yaml`, and `config/datasources.yaml` files.
 4. Backup the following directories: `assetdb`, `data`, and `logs`
 5. Update the compose local repo with the following command: `git pull origin master`
 6. Restore the files and directories backed up in Steps 3 and 4.
