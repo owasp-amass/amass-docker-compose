@@ -134,7 +134,7 @@ services:
     networks:
       - amass
     volumes:
-      - ./assetdb/postgres:/var/lib/postgresql/data:rw
+      - ./assetdb/postgres:/var/lib/postgresql:rw
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
