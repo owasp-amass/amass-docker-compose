@@ -31,16 +31,15 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 ### Build the Docker Images
 
 1. Your Amass framework is now configured and ready to be built. Docker Compose will build the required images and start them correctly when you perform your first `amass` command execution.
-2. Type the following to get started: `docker compose run --rm amass enum -d owasp.org`
+2. Type the following to get started: `docker compose run --rm enum -d owasp.org`
 3. If the build process times out, simply execute the command again to resume.
 
 ### Details about the Docker Environment
 
-* All persistent data used exists on your host in the local repo root directory.
+* All persistent data exists on your host in the local repo root directory.
 * The `assetdb` is a [PostgreSQL](https://github.com/postgres/postgres) database reachable from your localhost on port 5432.
 * Config files in the local repo are automatically mapped to where components expect to find them in the Docker environment.
-* Interact with the framework using the client program: `docker compose run --rm amass enum -d owasp.org`
-* You can obtain information about your asset discoveries by accessing the web UI at the following URL: `http://127.0.0.1:3000`
+* Interact with the framework using the client program: `docker compose run --rm subs -names -d owasp.org`
 
 ### Update Process for the Compose Environment
 

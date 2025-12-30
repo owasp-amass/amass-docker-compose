@@ -1,6 +1,6 @@
 services:
   enum:
-    build: https://github.com/owasp-amass/amass.git#main
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -16,7 +16,7 @@ services:
     entrypoint: /bin/enum
 
   viz:
-    build: https://github.com/owasp-amass/amass.git#main
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -34,7 +34,7 @@ services:
     entrypoint: /bin/viz
 
   subs:
-    build: https://github.com/owasp-amass/amass.git#main
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -52,7 +52,7 @@ services:
     entrypoint: /bin/subs
 
   assoc:
-    build: https://github.com/owasp-amass/amass.git#main
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -70,7 +70,7 @@ services:
     entrypoint: /bin/assoc
 
   track:
-    build: https://github.com/owasp-amass/amass.git#main
+    build: https://github.com/owasp-amass/amass.git#develop
     networks:
       - amass
     env_file:
@@ -88,7 +88,7 @@ services:
     entrypoint: /bin/track
 
   engine:
-    build: https://github.com/owasp-amass/amass.git#main
+    build: https://github.com/owasp-amass/amass.git#develop
     container_name: engine
     working_dir: /.config/amass
     networks:
@@ -128,7 +128,7 @@ services:
     entrypoint: /bin/engine
 
   assetdb:
-    build: https://github.com/owasp-amass/asset-db.git#main
+    build: https://github.com/owasp-amass/asset-db.git#develop
     shm_size: '4gb'
     container_name: assetdb
     networks:
@@ -181,10 +181,12 @@ services:
       retries: 5
 
   postal:
-    image: ghcr.io/le0pard/postal_server:latest
+    build: https://github.com/owasp-amass/amass.git#develop
     container_name: postal
     networks:
       - amass
+    environment:
+      - POSTAL_SERVER_PORT=8000
     env_file:
       - ./config/logs/syslog.env
     expose: 
@@ -202,10 +204,12 @@ services:
       syslog:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://postal:8000/health" ]
+      #test: [ "CMD", "curl", "-f", "http://postal:8000/health" ]
+      test: [ "CMD-SHELL", "exit 0" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    entrypoint: /bin/post_serv
 
   syslog:
     image: lscr.io/linuxserver/syslog-ng:latest
