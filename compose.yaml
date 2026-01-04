@@ -27,8 +27,8 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
-      neo4j:
-        condition: service_healthy
+#      neo4j:
+#        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/viz
@@ -45,8 +45,8 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
-      neo4j:
-        condition: service_healthy
+#      neo4j:
+#        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/subs
@@ -63,8 +63,8 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
-      neo4j:
-        condition: service_healthy
+#      neo4j:
+#        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/assoc
@@ -81,8 +81,8 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
-      neo4j:
-        condition: service_healthy
+#      neo4j:
+#        condition: service_healthy
       syslog:
         condition: service_healthy
     entrypoint: /bin/track
@@ -114,8 +114,8 @@ services:
     depends_on:
       assetdb:
         condition: service_healthy
-      neo4j:
-        condition: service_healthy
+#      neo4j:
+#        condition: service_healthy
       postal:
         condition: service_healthy
       syslog:
@@ -204,8 +204,7 @@ services:
       syslog:
         condition: service_healthy
     healthcheck:
-      #test: [ "CMD", "curl", "-f", "http://postal:8000/health" ]
-      test: [ "CMD-SHELL", "exit 0" ]
+      test: ["CMD-SHELL", "wget -qO- http://postal:8000/health > /dev/null"]
       interval: 10s
       timeout: 5s
       retries: 5
