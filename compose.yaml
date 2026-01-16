@@ -181,7 +181,7 @@ services:
       retries: 5
 
   postal:
-    build: https://github.com/owasp-amass/amass.git#develop
+    build: https://github.com/owasp-amass/libpostal-rest-api.git#main
     container_name: postal
     networks:
       - amass
