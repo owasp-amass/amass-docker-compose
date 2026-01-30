@@ -43,7 +43,7 @@ options:
 
 transformations:
   Account->ALL:
-    ttl: 1080 # 7 days
+    ttl: 10800 # 7 days
   AutnumRecord->ALL:
   AutonomousSystem->ALL:
   AutonomousSystem->RDAP:
@@ -52,12 +52,10 @@ transformations:
   DomainRecord->ALL:
   File->ALL:
   FQDN->ALL:
-  FQDN->DNS:
-    ttl: 1440
   FQDN->DomainRecord:
     ttl: 43200 # 30 days
   FundsTransfer->ALL:
-    ttl: 1080 # 7 days
+    ttl: 10800 # 7 days
   Identifier->ALL:
   Identifier->GLEIF:
     ttl: 43200 # 30 days
@@ -75,11 +73,11 @@ transformations:
   Person->ALL:
     ttl: 43200 # 30 days
   Phone->ALL:
-    ttl: 1080 # 7 days
+    ttl: 10800 # 7 days
   Product->ALL:
-    ttl: 10080 # 7 days
+    ttl: 10800 # 7 days
   ProductRelease->ALL:
   Service->ALL:
   TLSCertificate->ALL:
-    ttl: 10080 # 7 days
+    ttl: 10800 # 7 days
   URL->ALL:
