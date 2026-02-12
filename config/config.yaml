@@ -21,10 +21,9 @@ scope:
 options:
   datasources: "./datasources.yaml"
   engine: "http://engine:4000/graphql"
-  # be sure to set your username and password in the following URI to the 
-  # AMASS_USER and AMASS_PASSWORD values, respectively, in your .env file
-  # database: "bolt://neo4j:amass4OWASP@neo4j:7687/neo4j"
-  database: "postgres://amass:amass4OWASP@assetdb:5432/assetdb"
+  # database credentials are substituted from .env at container startup
+  database: "postgres://${AMASS_USER}:${AMASS_PASSWORD}@assetdb:5432/${AMASS_DB}"
+  # database: "bolt://neo4j:${AMASS_PASSWORD}@neo4j:7687/${AMASS_DB}"
   bruteforce:
     enabled: false
     wordlists: # wordlist(s) to use that are specific to brute forcing
