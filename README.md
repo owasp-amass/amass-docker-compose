@@ -40,6 +40,18 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 * The `neo4j` is a [Neo4j](https://neo4j.com/) database reachable from your localhost on port 7474.
 * Config files in the local repo are automatically mapped to where components expect to find them in the Docker environment.
 
+### Port Binding and Network Access
+
+Database ports are bound to `127.0.0.1` (localhost) by default, meaning they are only accessible from the machine running Docker:
+
+* **PostgreSQL** — `127.0.0.1:55432`
+* **Neo4j Browser** — `127.0.0.1:7474`
+* **Neo4j Bolt** — `127.0.0.1:7687`
+
+To allow remote access from other hosts on your network, change the port bindings in `compose.yaml` from `127.0.0.1:<port>:<port>` to `<port>:<port>`. For example, change `"127.0.0.1:7474:7474"` to `"7474:7474"`.
+
+> **Warning:** Exposing database ports to the network without a firewall is a security risk. Only open ports to the network if you understand the implications and have appropriate network-level controls in place.
+
 ### Usage: Amass Operations
 
 Run Amass subcommands using `docker compose run --rm <service> [args]`. Each service is a one-shot container that connects to the running engine.
