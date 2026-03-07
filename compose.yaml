@@ -25,6 +25,8 @@ services:
     logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
@@ -47,6 +49,8 @@ services:
     logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
@@ -71,6 +75,8 @@ services:
     logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
@@ -95,6 +101,8 @@ services:
     logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
@@ -119,6 +127,8 @@ services:
     logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
@@ -165,6 +175,7 @@ services:
     environment:
       - POSTAL_SERVER_HOST=postal
       - POSTAL_SERVER_PORT=8000
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
