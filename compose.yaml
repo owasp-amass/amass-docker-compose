@@ -3,6 +3,12 @@ x-security-hardened: &security-hardened
   cap_add: [DAC_OVERRIDE]
   security_opt: [no-new-privileges:true]
 
+# Stateless client services (enum, viz, subs, assoc, track) don't write files as
+# other users and don't need DAC_OVERRIDE — tightest possible capability set.
+x-client-hardened: &client-hardened
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
 x-logging: &default-logging
   driver: json-file
   options:
@@ -21,7 +27,7 @@ x-client-deploy: &client-deploy
 services:
   enum:
     build: https://github.com/owasp-amass/amass.git#develop
-    <<: *security-hardened
+    <<: *client-hardened
     logging: *default-logging
     networks:
       - amass
@@ -45,7 +51,7 @@ services:
 
   viz:
     build: https://github.com/owasp-amass/amass.git#develop
-    <<: *security-hardened
+    <<: *client-hardened
     logging: *default-logging
     networks:
       - amass
@@ -67,7 +73,7 @@ services:
 
   subs:
     build: https://github.com/owasp-amass/amass.git#develop
-    <<: *security-hardened
+    <<: *client-hardened
     logging: *default-logging
     networks:
       - amass
@@ -89,7 +95,7 @@ services:
 
   assoc:
     build: https://github.com/owasp-amass/amass.git#develop
-    <<: *security-hardened
+    <<: *client-hardened
     logging: *default-logging
     networks:
       - amass
@@ -111,7 +117,7 @@ services:
 
   track:
     build: https://github.com/owasp-amass/amass.git#develop
-    <<: *security-hardened
+    <<: *client-hardened
     logging: *default-logging
     networks:
       - amass
