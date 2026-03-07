@@ -59,10 +59,6 @@ services:
     deploy:
       <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
       config-init:
@@ -85,10 +81,6 @@ services:
     deploy:
       <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
       config-init:
@@ -111,10 +103,6 @@ services:
     deploy:
       <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
       config-init:
@@ -137,10 +125,6 @@ services:
     deploy:
       <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
       config-init:
@@ -196,10 +180,6 @@ services:
         reservations:
           memory: 1024M
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       postal:
         condition: service_healthy
       syslog:
@@ -212,6 +192,7 @@ services:
     entrypoint: /bin/engine
 
   assetdb:
+    profiles: [postgres]
     build: https://github.com/owasp-amass/asset-db.git#develop
     shm_size: '256m'
     container_name: assetdb
@@ -247,6 +228,7 @@ services:
         /usr/local/bin/docker-entrypoint.sh postgres
 
   neo4j:
+    profiles: [neo4j]
     image: neo4j:2026.01.4
     container_name: neo4j
     cap_drop: [ALL]
