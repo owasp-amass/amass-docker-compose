@@ -72,3 +72,15 @@ case ",${COMPOSE_PROFILES:-}," in
       "$cfg" > "$tmpfile" && mv "$tmpfile" "$cfg"
     ;;
 esac
+
+# Strip the legacy /graphql suffix from the engine URL if present.
+# Upstream amass moved from GraphQL to a REST API; the correct base URL is
+# http://engine:4000 (no path component). The template may still carry /graphql
+# from the old format so we normalize it here.
+tmpfile=$(mktemp)
+sed 's|/graphql"$|"|' "$cfg" > "$tmpfile" && mv "$tmpfile" "$cfg"
+
+# Make config.yaml readable by the service user (uid=1000) running in client containers.
+# config-init runs as root; without this the file is rw------- and clients silently
+# fall back to SQLite defaults, ignoring the configured database.
+chmod 644 "$cfg"
