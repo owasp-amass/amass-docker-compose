@@ -32,6 +32,7 @@ services:
     networks:
       - amass
     environment:
+      - AMASS_ENGINE_HOST=engine
       - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
@@ -56,6 +57,7 @@ services:
     networks:
       - amass
     environment:
+      - AMASS_ENGINE_HOST=engine
       - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
@@ -78,6 +80,7 @@ services:
     networks:
       - amass
     environment:
+      - AMASS_ENGINE_HOST=engine
       - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
@@ -100,6 +103,7 @@ services:
     networks:
       - amass
     environment:
+      - AMASS_ENGINE_HOST=engine
       - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
@@ -122,6 +126,7 @@ services:
     networks:
       - amass
     environment:
+      - AMASS_ENGINE_HOST=engine
       - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
