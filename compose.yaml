@@ -251,7 +251,6 @@ services:
       - ./assetdb/neo4j:/data:rw
     environment:
       - NEO4J_AUTH=neo4j/${AMASS_PASSWORD}
-      - NEO4J_initial_dbms_default__database=${AMASS_DB}
       - NEO4J_server_memory_heap_max__size=4G
       - AMASS_PASSWORD=${AMASS_PASSWORD}
     ports:

@@ -23,7 +23,7 @@ options:
   engine: "http://engine:4000"
   # database credentials are substituted from .env at container startup
   database: "postgres://${AMASS_USER}:${AMASS_PASSWORD}@assetdb:5432/${AMASS_DB}"
-  # database: "bolt://neo4j:${AMASS_PASSWORD}@neo4j:7687/${AMASS_DB}"
+  # database: "bolt://neo4j:${AMASS_PASSWORD}@neo4j:7687/neo4j"
   bruteforce:
     enabled: false
     wordlists: # wordlist(s) to use that are specific to brute forcing
