@@ -25,7 +25,7 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 ### Configure the Compose Environment
 
 1. Copy the template to create your environment file: `cp .env.template .env && chmod 0600 .env` — then edit `.env` and set a strong `POSTGRES_PASSWORD` and `AMASS_PASSWORD`. You may also change `AMASS_DB` and `AMASS_USER` if desired. **Credentials cannot be changed after the database has been created.**
-2. PostgreSQL is the default database. To use Neo4j instead, set `DB_SERVER=neo4j` in `.env`. Database credentials and selection are handled automatically at container startup — no manual editing of `config/config.yaml` is needed.
+2. PostgreSQL is the default database. To use Neo4j instead, set `COMPOSE_PROFILES=neo4j` in `.env`. To use SQLite (no external database), set `COMPOSE_PROFILES=` (empty). Database credentials and selection are handled automatically at container startup — no manual editing of `config/config.yaml` is needed.
 3. Optional: update `config/datasources.yaml` by uncommenting data sources and adding account credentials.
 
 ### Build the Docker Images
@@ -93,7 +93,7 @@ docker compose run --rm viz -d example.com -dot -gexf -oA myresults
 
 ### Neo4j Browser
 
-If you set `DB_SERVER=neo4j` in `.env`, you can browse the graph database at [http://127.0.0.1:7474](http://127.0.0.1:7474). Log in with username `neo4j` and the `AMASS_PASSWORD` value from your `.env` file.
+If you set `COMPOSE_PROFILES=neo4j` in `.env`, you can browse the graph database at [http://127.0.0.1:7474](http://127.0.0.1:7474). Log in with username `neo4j` and the `AMASS_PASSWORD` value from your `.env` file.
 
 ### Tips
 

@@ -1,6 +1,10 @@
-.env  
+.env
 config/config.yaml
 config/datasources.yaml
+config/asset.db
+config/asset.db-shm
+config/asset.db-wal
+config/proxy.env
 assetdb/*
 data/*
 logs/*

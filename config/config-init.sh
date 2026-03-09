@@ -2,7 +2,7 @@
 set -eu
 
 # Source credentials from Docker secret
-. /run/secrets/user_env_file
+. "${SECRETS_FILE:-/run/secrets/user_env_file}"
 
 # Guard against default credentials — fail fast before touching config files.
 if [ "${AMASS_PASSWORD:-}" = "ChangeMe!" ]; then
@@ -14,7 +14,7 @@ if [ "${POSTGRES_PASSWORD:-}" = "ChangeMe!" ]; then
     exit 1
 fi
 
-cfg=/.config/amass/config.yaml
+cfg="${CONFIG_FILE:-/.config/amass/config.yaml}"
 tmpfile=$(mktemp)
 trap 'rm -f "$tmpfile"' EXIT
 
