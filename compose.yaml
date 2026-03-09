@@ -1,106 +1,181 @@
+x-security-hardened: &security-hardened
+  cap_drop: [ALL]
+  cap_add: [DAC_OVERRIDE]
+  security_opt: [no-new-privileges:true]
+
+# Stateless client services (enum, viz, subs, assoc, track) don't write files as
+# other users and don't need DAC_OVERRIDE — tightest possible capability set.
+x-client-hardened: &client-hardened
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-client-deploy: &client-deploy
+  resources:
+    limits:
+      cpus: '1.0'
+      memory: 512M
+      pids: 100
+    reservations:
+      memory: 256M
+
 services:
   enum:
     build: https://github.com/owasp-amass/amass.git#develop
+    <<: *client-hardened
+    logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_ENGINE_HOST=engine
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./config:/.config/amass:rw
       - ./data/enum:/data:rw
+    deploy:
+      <<: *client-deploy
     depends_on:
       engine:
         condition: service_healthy
       syslog:
         condition: service_healthy
+      config-init:
+        condition: service_completed_successfully
     entrypoint: /bin/enum
 
   viz:
     build: https://github.com/owasp-amass/amass.git#develop
+    <<: *client-hardened
+    logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_ENGINE_HOST=engine
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./config:/.config/amass:rw
       - ./data/viz:/data:rw
+    deploy:
+      <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
+      config-init:
+        condition: service_completed_successfully
     entrypoint: /bin/viz
 
   subs:
     build: https://github.com/owasp-amass/amass.git#develop
+    <<: *client-hardened
+    logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_ENGINE_HOST=engine
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./config:/.config/amass:rw
       - ./data/subs:/data:rw
+    deploy:
+      <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
+      config-init:
+        condition: service_completed_successfully
     entrypoint: /bin/subs
 
   assoc:
     build: https://github.com/owasp-amass/amass.git#develop
+    <<: *client-hardened
+    logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_ENGINE_HOST=engine
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./config:/.config/amass:rw
       - ./data/assoc:/data:rw
+    deploy:
+      <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
+      config-init:
+        condition: service_completed_successfully
     entrypoint: /bin/assoc
 
   track:
     build: https://github.com/owasp-amass/amass.git#develop
+    <<: *client-hardened
+    logging: *default-logging
     networks:
       - amass
+    environment:
+      - AMASS_ENGINE_HOST=engine
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./config:/.config/amass:rw
       - ./data/track:/data:rw
+    deploy:
+      <<: *client-deploy
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       syslog:
         condition: service_healthy
+      config-init:
+        condition: service_completed_successfully
     entrypoint: /bin/track
+
+  config-init:
+    image: alpine:3.21
+    <<: *security-hardened
+    logging: *default-logging
+    network_mode: none
+    secrets:
+      - user_env_file
+    volumes:
+      - ./config:/.config/amass:rw
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 64M
+          pids: 50
+    entrypoint: ["/bin/sh", "/.config/amass/config-init.sh"]
 
   engine:
     build: https://github.com/owasp-amass/amass.git#develop
     container_name: engine
+    <<: *security-hardened
+    logging: *default-logging
     working_dir: /.config/amass
     networks:
       - amass
     environment:
       - POSTAL_SERVER_HOST=postal
       - POSTAL_SERVER_PORT=8000
+      - AMASS_LOGLEVEL=${AMASS_LOGLEVEL:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./data/engine:/.config/amass:rw
-    expose: 
+    expose:
       - "4000"
     deploy:
       restart_policy:
@@ -109,13 +184,13 @@ services:
         max_attempts: 5
         window: 360s
       resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+          pids: 200
         reservations:
           memory: 1024M
     depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
       postal:
         condition: service_healthy
       syslog:
@@ -128,9 +203,13 @@ services:
     entrypoint: /bin/engine
 
   assetdb:
+    profiles: [postgres]
     build: https://github.com/owasp-amass/asset-db.git#develop
-    shm_size: '4gb'
+    shm_size: '256m'
     container_name: assetdb
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    logging: *default-logging
     networks:
       - amass
     volumes:
@@ -142,11 +221,15 @@ services:
       - AMASS_USER=${AMASS_USER}
       - AMASS_PASSWORD=${AMASS_PASSWORD}
     ports:
-      - "55432:5432"
+      - "127.0.0.1:55432:5432"
     deploy:
       restart_policy:
         condition: any
       resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+          pids: 200
         reservations:
           memory: 512M
     entrypoint:
@@ -156,8 +239,12 @@ services:
         /usr/local/bin/docker-entrypoint.sh postgres
 
   neo4j:
-    image: neo4j:latest
+    profiles: [neo4j]
+    image: neo4j:2026.01.4
     container_name: neo4j
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    logging: *default-logging
     networks:
       - amass
     volumes:
@@ -165,17 +252,23 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/${AMASS_PASSWORD}
       - NEO4J_server_memory_heap_max__size=4G
+      - AMASS_PASSWORD=${AMASS_PASSWORD}
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     deploy:
       restart_policy:
         condition: any
       resources:
+        limits:
+          cpus: '2.0'
+          memory: 6144M
+          pids: 200
         reservations:
           memory: 2048M
     healthcheck:
-      test: [ "CMD-SHELL", "exit 0" ]
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p \"$${AMASS_PASSWORD}\" 'RETURN 1' || exit 1"]
+      start_period: 30s
       interval: 10s
       timeout: 5s
       retries: 5
@@ -183,13 +276,15 @@ services:
   postal:
     build: https://github.com/owasp-amass/libpostal-rest-api.git#main
     container_name: postal
+    <<: *security-hardened
+    logging: *default-logging
     networks:
       - amass
     environment:
       - POSTAL_SERVER_PORT=8000
     env_file:
       - ./config/logs/syslog.env
-    expose: 
+    expose:
       - "8000"
     deploy:
       restart_policy:
@@ -198,6 +293,10 @@ services:
         max_attempts: 5
         window: 360s
       resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+          pids: 200
         reservations:
           memory: 2048M
     depends_on:
@@ -211,8 +310,11 @@ services:
     entrypoint: /bin/post_serv
 
   syslog:
-    image: lscr.io/linuxserver/syslog-ng:latest
+    image: lscr.io/linuxserver/syslog-ng:4.8.1
     container_name: syslog
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    logging: *default-logging
     networks:
       - amass
     environment:
@@ -227,13 +329,23 @@ services:
     deploy:
       restart_policy:
         condition: any
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+          pids: 100
     healthcheck:
-      test: [ "CMD-SHELL", "exit 0" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "syslog-ng-ctl healthcheck --timeout 5 -c /config/syslog-ng.ctl || exit 1"]
+      start_period: 10s
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   amass:
     driver: bridge
     name: amass-net
+
+secrets:
+  user_env_file:
+    file: ./.env

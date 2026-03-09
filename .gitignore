@@ -1,0 +1,16 @@
+.env
+config/config.yaml
+config/datasources.yaml
+config/asset.db
+config/asset.db-shm
+config/asset.db-wal
+config/proxy.env
+assetdb/*
+data/*
+logs/*
+config/logs/log/
+config/logs/syslog-ng.ctl
+config/logs/syslog-ng.persist
+config/logs/syslog-ng.pid
+.claude/*
+CLAUDE.md
