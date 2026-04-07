@@ -64,6 +64,7 @@ transformations:
   IPAddress->ALL:
   IPNetRecord->ALL:
   Location->ALL:
+    confidence: 80
   Netblock->ALL:
   Netblock->RDAP:
     ttl: 43200 # 30 days
