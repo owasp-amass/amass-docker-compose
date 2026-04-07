@@ -37,7 +37,7 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 ### Details about the Docker Environment
 
 * All persistent data exists on your host in the local repo root directory.
-* The `assetdb` is a [PostgreSQL](https://github.com/postgres/postgres) database reachable from your localhost on port 5432.
+* The `assetdb` is a [PostgreSQL](https://github.com/postgres/postgres) database reachable from your localhost on port 55432.
 * Config files in the local repo are automatically mapped to where components expect to find them in the Docker environment.
 * Interact with the framework using the client program: `docker compose run --rm subs -names -d owasp.org`
 
@@ -59,7 +59,7 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 
 ## Corporate Supporters
 
-[![ZeroFox Logo](https://github.com/owasp-amass/amass/blob/master/images/zerofox_logo.png)](https://www.zerofox.com/) [![WhoisXML API Logo](https://github.com/owasp-amass/amass/blob/master/images/whoisxmlapi_logo.png)](https://www.whoisxmlapi.com/)
+[![WhoisXML API Logo](https://github.com/owasp-amass/amass/blob/master/images/whoisxmlapi_logo.png)](https://www.whoisxmlapi.com/)
 
 ## Testimonials
 
@@ -85,6 +85,6 @@ If you need help with installation and/or usage of the tool, please join our [Di
 
 ## Licensing [![License](https://img.shields.io/badge/license-apache%202-blue)](https://www.apache.org/licenses/LICENSE-2.0)
 
-This program is free software: you can redistribute it and/or modify it under the terms of the [Apache license](LICENSE). OWASP Amass and any contributions are Copyright © by Jeff Foley 2017-2025. Some subcomponents have separate licenses.
+This program is free software: you can redistribute it and/or modify it under the terms of the [Apache license](LICENSE). OWASP Amass and any contributions are Copyright © by Jeff Foley 2017-2026. Some subcomponents have separate licenses.
 
 ![Network graph](https://github.com/owasp-amass/amass/blob/master/images/network_06092018.png "Amass Network Mapping")
