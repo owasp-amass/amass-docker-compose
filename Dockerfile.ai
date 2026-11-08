@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+# Development-only image builds the MATCHING Amass and Asset Database
+# feature branches. This never modifies published owaspamass/amass:latest.
+FROM golang:1.27.3-alpine AS build
+RUN apk --no-cache add git ca-certificates
+ARG AMASS_REF=feature/ai-investigation-inference
+ARG ASSETDB_REF=feature/ai-investigation-inference
+WORKDIR /src
+RUN git clone --single-branch --branch "$ASSETDB_REF" https://github.com/owasp-amass/asset-db.git asset-db \
+ && git clone --single-branch --branch "$AMASS_REF" https://github.com/owasp-amass/amass.git amass
+WORKDIR /src/amass
+# The replacement is for the build stage only, not a committed go.mod edit.
+RUN go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
+ && CGO_ENABLED=0 go install -v ./...
+
+FROM alpine:latest
+RUN apk --no-cache add bash ca-certificates \
+ && addgroup -S amass \
+ && adduser -S -G amass amass \
+ && mkdir -p /.config/amass /data \
+ && chown -R amass:amass /.config /data
+COPY --from=build /go/bin/amass /bin/amass
+COPY --from=build /go/bin/amass-ai-mcp /bin/amass-ai-mcp
+COPY --from=build /go/bin/oam_enum /bin/enum
+COPY --from=build /go/bin/amass_engine /bin/engine
+COPY --from=build /go/bin/ae_isready /bin/ae_isready
+COPY --from=build /go/bin/oam_subs /bin/subs
+COPY --from=build /go/bin/oam_assoc /bin/assoc
+COPY --from=build /go/bin/oam_viz /bin/viz
+COPY --from=build /go/bin/oam_track /bin/track
+COPY --from=build /go/bin/oam_i2y /bin/i2y
+ENV HOME=/
+USER amass
+WORKDIR /data
+STOPSIGNAL SIGINT
+ENTRYPOINT ["/bin/amass"]
