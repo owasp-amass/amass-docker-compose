@@ -5,11 +5,27 @@ services:
   ai:
     profiles: [ai]
     image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+      args:
+        AMASS_REF: ${AMASS_AI_AMASS_REF:-feature/ai-investigation-inference}
+        ASSETDB_REF: ${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}
     networks: [amass]
     env_file:
       - ./config/logs/syslog.env
     environment:
       AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
+      AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-compatible}
+      AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434/v1/chat/completions}
+      AMASS_AI_MODEL: ${AMASS_AI_MODEL:-qwen3:8b}
+      # Explicit opt-in for trusted container-network HTTP. Do not enable
+      # for an untrusted remote provider.
+      AMASS_AI_ALLOW_HTTP: ${AMASS_AI_ALLOW_HTTP:-false}
+      AMASS_AI_MODEL_TIMEOUT: ${AMASS_AI_MODEL_TIMEOUT:-4m}
+      AMASS_AI_INVESTIGATION_TIMEOUT: ${AMASS_AI_INVESTIGATION_TIMEOUT:-12m}
+      AMASS_AI_CLASSIFIER_MODEL: ${AMASS_AI_CLASSIFIER_MODEL:-}
+      AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-false}
     volumes:
       - ./config:/.config/amass:ro
       - ./data/ai:/data:rw
@@ -36,3 +52,23 @@ services:
     entrypoint: ["/bin/amass-ai-mcp", "-config", "/.config/amass/config.yaml"]
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+
+
+  # Opt-in local inference service. The model is not downloaded until the
+  # user runs "docker compose ... exec ollama ollama pull <model>".
+  # No host port is published: model traffic stays on the Compose network.
+  ollama:
+    profiles: [ai-model]
+    image: ollama/ollama:latest
+    networks: [amass]
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ./data/ollama:/root/.ollama:rw
+    expose:
+      - "11434"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
