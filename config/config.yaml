@@ -82,3 +82,19 @@ transformations:
   TLSCertificate->ALL:
     ttl: 10800 # 7 days
   URL->ALL:
+
+# Optional AI settings for the feature-branch amass ai subcommand.
+# This section is deliberately disabled by default: normal enumeration,
+# tracking and visualization do not need a model.
+# ai:
+#   provider: compatible
+#   endpoint: http://ollama:11434/v1/chat/completions
+#   model: qwen3:8b
+#   allow_http: true    # trusted private Compose network ONLY
+#   model_timeout: 4m
+#   investigation_timeout: 12m
+#   max_matches: 20
+#   max_paths_per_asset: 3
+#   guidance_rounds: 0
+#   classifier_model: /data/classifier.json  # optional trained model
+#   classifier_review: false
