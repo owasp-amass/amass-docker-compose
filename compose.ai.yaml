@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+# Optional Amass AI services; requires an AI-enabled Amass image.
+# See AI.md for build and usage.
+services:
+  ai:
+    profiles: [ai]
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    networks: [amass]
+    env_file:
+      - ./config/logs/syslog.env
+    environment:
+      AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
+    depends_on:
+      assetdb:
+        condition: service_healthy
+    entrypoint: ["/bin/amass", "ai", "-config", "/.config/amass/config.yaml"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  ai-mcp:
+    profiles: [ai-mcp]
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    networks: [amass]
+    env_file:
+      - ./config/logs/syslog.env
+    volumes:
+      - ./config:/.config/amass:ro
+    depends_on:
+      assetdb:
+        condition: service_healthy
+    stdin_open: true
+    tty: false
+    entrypoint: ["/bin/amass-ai-mcp", "-config", "/.config/amass/config.yaml"]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
