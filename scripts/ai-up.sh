@@ -87,7 +87,12 @@ fi
 if (( local_model == 1 )); then
   echo "Starting Ollama and ensuring the configured model is loaded..."
   "${compose[@]}" --profile ai-local up -d --wait --wait-timeout 180 ollama
-  "${compose[@]}" --profile ai-local run --rm ollama-pull
+  model_name="$("${compose[@]}" --profile ai-local config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["ollama-pull"]["command"][0])')"
+  if "${compose[@]}" --profile ai-local exec -T ollama ollama show "$model_name" >/dev/null 2>&1; then
+    echo "Ollama model $model_name already installed; skipping download."
+  else
+    "${compose[@]}" --profile ai-local run --rm ollama-pull
+  fi
 else
   echo "Using configured external inference provider ($provider); local Ollama not required."
 fi
