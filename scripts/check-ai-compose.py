@@ -36,9 +36,12 @@ def main():
         name = services[service].get("container_name", "")
         assert name.startswith(project + "-"), (service, name)
 
+    ai_image = services["ai"].get("image", "")
+    assert ai_image and ai_image != "owaspamass/amass:latest", (
+        "AI feature image must not be the published legacy Amass image")
     for service in ("enum", "subs", "assoc", "track", "viz", "engine", "ai", "ai-mcp"):
-        assert services[service].get("image", "").endswith("amass-ai:dev"), (
-            service, "Legacy image accidentally enabled in feature-image overlay")
+        assert services[service].get("image", "") == ai_image, (
+            service, "Service is not using the exact shared feature-image tag")
 
     # Database must not publish on the standard baseline 55432 port.
     db_ports = services["assetdb"].get("ports", [])
