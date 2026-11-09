@@ -177,11 +177,35 @@ All commands now reference the **same `compose.yaml`**. The obsolete
 `compose.ai.yaml`, `compose.ai-stack.yaml`, and
 `compose.ai-isolation.yaml` overlays have been removed.
 
-To stop the disposable stack without deleting data:
+To stop **all** AI test containers, including the separately profiled
+local Ollama service, without deleting data:
 
 ```bash
-docker compose down
+bash scripts/ai-down.sh
 ```
+
+The startup script now records `COMPOSE_PROFILES=ai-local` in your **local**
+`.env` when using the internal Ollama provider. This makes
+`docker compose down` from a fresh shell profile-aware as well.
+If you were using an older `.env`, one-time cleanup is:
+
+```bash
+docker compose --profile ai-local down
+```
+
+If Docker still reports `Resource is still in use`, inspect which
+container holds the project's network rather than force-disconnecting
+it or deleting storage:
+
+```bash
+docker ps -a --filter network=amass-ai-test-net \
+  --format 'table {{.Names}}\\t{{.Status}}'
+```
+
+One-off `docker compose run` containers interrupted before `--rm`
+completed, external tooling attached to the bridge, and profiled
+containers can all retain the network. The normal `down` command
+does **not** delete your bind-mounted PostgreSQL or Ollama data.
 
 **Never use `docker compose down -v` to troubleshoot this test
 environment unless you deliberately intend to discard its volumes.**
