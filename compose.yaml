@@ -25,7 +25,8 @@ services:
   # Optional CLI for ad-hoc investigations; NOT a daemon on 'up -d'.
   ai:
     <<: *ai-image
-    profiles: [ai-tools]
+    # Exactly like enum/subs/assoc: this is a one-shot amass subcommand.
+    # Use: docker compose run --rm ai -question "..." ask
     build:
       context: .
       dockerfile: Dockerfile.ai
