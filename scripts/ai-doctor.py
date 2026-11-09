@@ -7,7 +7,7 @@ import subprocess
 import sys
 import urllib.request
 
-FILES=["compose.yaml","compose.ai.yaml","compose.ai-stack.yaml","compose.ai-isolation.yaml"]
+FILES=["compose.yaml"]
 COMPOSE=["docker","compose"]
 for item in FILES:
     COMPOSE+=["-f",item]
