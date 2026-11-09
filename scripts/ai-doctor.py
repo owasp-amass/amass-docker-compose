@@ -11,6 +11,8 @@ FILES=["compose.yaml","compose.ai.yaml","compose.ai-stack.yaml","compose.ai-isol
 COMPOSE=["docker","compose"]
 for item in FILES:
     COMPOSE+=["-f",item]
+# Explicitly activate AI-profile services for every exec, not just config.
+COMPOSE+=["--profile","ai"]
 
 def run(*args):
     r=subprocess.run(args,capture_output=True,text=True)
@@ -31,7 +33,7 @@ def request(url,method,payload,token,session=""):
         return response.status,response.headers,(json.loads(body) if body else {})
 
 def main():
-    cfg=json.loads(run(*COMPOSE,"--profile","ai","config","--format","json"))
+    cfg=json.loads(run(*COMPOSE,"config","--format","json"))
     pub=cfg["services"]["ai-mcp"]["ports"][0]["published"]
     token=os.environ.get("AMASS_AI_MCP_TOKEN")
     if not token:
