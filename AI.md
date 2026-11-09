@@ -1,255 +1,254 @@
-# AI-enabled Amass: isolated Docker Compose test environment
+# Amass AI — one-command Docker Compose environment
 
-This is the **feature-branch integration test runbook**, not a production
-upgrade. The existing `compose.yaml` remains unchanged. Always include the
-isolation overlay when testing in parallel with another Amass installation.
+This feature branch extends the **existing** `amass-docker-compose`
+deployment. It preserves the original `compose.yaml` and adds
+isolated development services for local or hosted inference, supervised
+classification and a persistent MCP endpoint.
 
-The development branch assembles these components:
+## Start the complete environment
 
-| File | Function |
-| --- | --- |
-| `compose.yaml` | Existing engine, clients, PostgreSQL, syslog, libpostal |
-| `compose.ai.yaml` | Opt-in `ai`, stdio `ai-mcp`, and `ollama` |
-| `compose.ai-stack.yaml` | Switch existing engine/clients and Asset DB to matching feature branches |
-| `compose.ai-isolation.yaml` | Unique Docker project/container/network names and non-conflicting published ports |
-| `Dockerfile.ai` | Compile both feature branches into the same non-root Amass client/engine image |
-| `.env.ai.example` | Model, image, UID/GID, and isolated-stack settings |
-| `scripts/check-ai-compose.py` | Read-only Compose validation and isolation checks |
-| `scripts/smoke-ai-image.sh` | Build image and inspect all legacy/AI executables without database startup |
-| `scripts/check-ai-stack-ready.sh` | PostgreSQL/engine readiness and **model-free**, read-only asset lookup |
-
-## Stage 0: prerequisites and isolation
-
-Use Docker Compose **v2.24.4 or later** (required for `!override` in the
-isolation overlay), Python 3, adequate disk/RAM for Go and Ollama, and
-a fresh **disposable** checkout with a fresh database directory.
+In the existing **disposable feature-branch Compose checkout**:
 
 ```bash
-git clone --branch feature/ai-investigation-inference \
-  https://github.com/owasp-amass/amass-docker-compose.git \
-  amass-compose-ai-test
-cd amass-compose-ai-test
-
-docker compose version
-mkdir -p data/ai data/ollama
-
-# IMPORTANT: the checked-in .env and config/config.yaml contain
-# illustrative credentials. Change BOTH before first DB initialization:
-# .env -> POSTGRES_PASSWORD, AMASS_PASSWORD
-# config/config.yaml -> options.database password (and username/database
-# if changed). Use matching URL-encoded credentials in the Postgres URI.
-#
-# Review .env.ai.example. Append desired AMASS_AI_* and AMASS_TEST_*
-# values to the LOCAL .env, or export them. Do NOT overwrite existing
-# AMASS_DB, AMASS_USER, AMASS_PASSWORD, POSTGRES_PASSWORD values.
-#
-# On Linux, set AMASS_AI_UID=$(id -u) and AMASS_AI_GID=$(id -g)
-# if your host bind-mounted data is not writable by UID 1000.
+git fetch origin feature/ai-investigation-inference
+git merge --ff-only origin/feature/ai-investigation-inference
+bash scripts/ai-up.sh
 ```
 
-Do not point this environment at an existing PostgreSQL data directory.
-Never run `docker compose down -v` against an important environment.
-The isolation overlay changes the default `amass-net` network,
-named containers, host DB port `55432` (now `55433` by default), and
-Neo4j host ports. The DB test port binds only to `127.0.0.1`.
-Adjust the `AMASS_TEST_*` values if these names/ports are already used.
+**The only startup command is `bash scripts/ai-up.sh`.** It:
 
-## Stage 1: static preflight (no containers started)
+1. Validates the isolated Compose configuration, creates necessary folders
+   and generates a persistent secret under `data/ai/.mcp-token` when
+   `AMASS_AI_MCP_TOKEN` is not already set.
+2. Builds the matching Amass and Asset Database feature branches.
+3. If `data/classifier-training/labeled.jsonl` exists and is newer
+   than `data/models/classifier.json`, trains the classifier and saves
+   the versioned model. If no data is available, starts an explicitly
+   **untrained fallback** that only escalates decisions.
+4. Starts Ollama and pulls the configured model **only** when
+   `AMASS_AI_ENDPOINT` targets the internal
+   `http://ollama:11434/v1/chat/completions` endpoint.
+   Otherwise it uses the configured HTTPS provider.
+5. Starts PostgreSQL, the Amass engine, classifier, cached inference
+   readiness checker and authenticated MCP HTTP service, then waits for
+   the necessary health checks to pass.
+
+Inference readiness means the configured provider and model returned a
+**real response**, not just that the TCP socket was reachable. Health
+polls consult a cached result and don't repeatedly run inference.
+The external provider never determines which local classifier runs.
+
+**Isolation:** Always test from a separate checkout with a separate
+PostgreSQL data directory. The isolation overlay changes Docker
+container names, network and host ports. The original environment is
+not migrated. Published DB and MCP ports bind to `127.0.0.1` only.
+
+## Check the complete stack
 
 ```bash
-python3 scripts/check-ai-compose.py
-
-docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  --profile ai --profile ai-model config --quiet
+python3 scripts/ai-doctor.py
 ```
 
-This verifies merged Compose syntax, required services, image references,
-unique container/network names, model isolation and read-only config.
-`scripts/check-ai-compose.py` deliberately fails closed if Docker/Compose
-or a required service is unavailable.
+This checks the selected provider's cached successful inference,
+reports whether the classifier has a trained model, and performs an
+authenticated MCP `initialize` → `notifications/initialized` →
+`tools/list` → session termination.
 
-The feature branch also has a GitHub Actions static preflight. A manual
-workflow-dispatch option can run the image smoke check; CI execution
-status must be checked rather than assumed.
+It does **not** scan the Internet or insert graph relationships.
 
-## Stage 2: image build and legacy CLI smoke (no DB started)
-
-```bash
-bash scripts/smoke-ai-image.sh
-```
-
-This builds `amass-ai:dev` from the matching Amass and Asset DB feature
-branches, checks the executable bits of the existing `enum`, `subs`,
-`assoc`, `viz`, `track`, `engine` and `ae_isready` binaries and the
-new `amass` and `amass-ai-mcp`, then invokes `amass -version`.
-
-It neither starts the engine nor performs collection or model inference.
-Builds download Go modules and Git repositories; a network connection is
-needed for compilation.
-
-## Stage 3: isolated PostgreSQL and engine readiness
-
-Start *only* the testing stack, always supplying all four files.
+For service status:
 
 ```bash
 docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  up -d assetdb syslog postal engine
-
-bash scripts/check-ai-stack-ready.sh
+ -f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml \
+ -f compose.ai-isolation.yaml --profile ai ps
 ```
 
-The readiness script verifies PostgreSQL and engine readiness and runs
-the new **model-free** `amass ai search` against a deliberately absent
-`.invalid` hostname. It must return an indexed `not_found` result.
-No Internet enumeration or model inference occurs. If the fixture
-hostname unexpectedly exists in the database, the script fails.
+## Inference model configuration
 
-Check service logs before proceeding:
+Edit the **local** `.env` or export environment variables before
+running `scripts/ai-up.sh`.
 
-```bash
-docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  logs --tail=100 assetdb engine
-```
-
-To check existing legacy command help in the same development image
-without executing enumeration, run:
-
-```bash
-docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  run --rm --no-deps enum -h
-```
-
-The same command style applies to `subs`, `assoc`, `viz` and `track`.
-Only initiate actual enumeration for targets you are authorized to assess.
-
-## Stage 4: optional local inference via Ollama
-
-Append the following to the **local** `.env` or export these variables:
+Local Ollama (default when no override is present):
 
 ```dotenv
 AMASS_AI_PROVIDER=compatible
 AMASS_AI_ENDPOINT=http://ollama:11434/v1/chat/completions
 AMASS_AI_MODEL=qwen3:8b
-AMASS_AI_ALLOW_HTTP=true
 AMASS_AI_MODEL_TIMEOUT=4m
 AMASS_AI_INVESTIGATION_TIMEOUT=12m
 ```
 
-The model endpoint uses HTTP **only within the trusted, isolated Docker
-network**. Remote providers must use HTTPS; do not expose the Ollama
-container port on the host by default.
+The startup script opts into HTTP *only* for that trusted internal
+Ollama hostname. Do not enable plaintext HTTP for external providers.
+
+Example hosted OpenAI-compatible model:
+
+```dotenv
+AMASS_AI_PROVIDER=compatible
+AMASS_AI_ENDPOINT=https://your-provider.example/v1/chat/completions
+AMASS_AI_MODEL=your-authorized-model
+AMASS_AI_API_KEY=your-secret
+AMASS_AI_ALLOW_HTTP=false
+```
+
+Anthropic native Messages API:
+
+```dotenv
+AMASS_AI_PROVIDER=anthropic
+AMASS_AI_ENDPOINT=https://api.anthropic.com/v1/messages
+AMASS_AI_MODEL=your-authorized-anthropic-model
+AMASS_AI_API_KEY=your-secret
+AMASS_AI_ALLOW_HTTP=false
+```
+
+API keys should preferably be provided from a separate secured
+environment/secrets mechanism rather than a Git-tracked file.
+The provider-health service uses the **same** provider, endpoint,
+model and credentials as the AI investigation client.
+
+Standalone `amass ai` still supports `ai:` YAML settings, corresponding
+environment variables, and command-line flags, with explicit flags
+taking precedence. In this Compose stack, environment variables
+select the deployment-wide provider.
+
+## Classifier: trained or untrained, always running
+
+The classifier is independent from Qwen3, Anthropic and other generative
+providers. It runs as the `classifier` service on the private network
+at `http://classifier:8092`. The CLI is configured to use it through
+`AMASS_AI_CLASSIFIER_ENDPOINT` automatically; no local model file
+needs to be opened by each CLI invocation.
+
+- `GET /readyz` returns `trained: true` with the model ID when a
+  valid JSON model artifact was loaded.
+- Without an artifact, it returns `trained: false`,
+  `mode: untrained_fallback` and `routing: escalate`.
+  This is deliberately **healthy**: it explicitly abstains rather
+  than pretending to have learned anything.
+- `POST /v1/classify` takes an OAM feature vector and returns a triage
+  prediction, never an accepted asset relationship.
+- Invalid/incompatible model files fail startup rather than
+  silently falling back.
+
+### How to provide training data
+
+Create `data/classifier-training/labeled.jsonl`. Each line represents
+an **independently labeled** candidate investigation and a group
+identifier that keeps the same case out of both train and validation
+splits. Schema:
+
+```json
+{"group_id":"case-001","label":"potential_relation","features":{"distinct_sources":1.0,"evidence_count":0.75,"source_property_fraction":1.0,"unattributed_fraction":0.0}}
+```
+
+The other label is `unrelated`. All four features are required and
+normalized between 0 and 1. The exact versioned feature extractor is
+defined in `internal/ai/routing.go`. **Do not use the sample row as
+ground truth.** The training data must come from analyst-reviewed
+cases; repeated entries of the example would not create a useful
+classifier.
+
+Minimum dataset gate: 40 labeled examples, 20 distinct case groups,
+at least eight held-out examples, and at least 10 training examples per
+class. The trainer uses group-separated holdout data, reports
+accuracy/precision/recall and emits a JSON linear model with the
+`oam-provenance-v1` feature version.
+
+```bash
+bash scripts/ai-up.sh
+```
+
+That's all that's required for automatic training when the dataset
+exists and is newer than the model. For a manual rebuild:
 
 ```bash
 docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  --profile ai-model up -d ollama
-
-docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  exec ollama ollama pull qwen3:8b
+ -f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml \
+ -f compose.ai-isolation.yaml --profile ai-train \
+ run --rm classifier-train
 ```
 
-Once the database contains approved test data, invoke an investigation:
+Then restart the classifier to load the new artifact, or simply
+rerun `bash scripts/ai-up.sh`.
+
+**Important:** The linear classifier currently produces
+`uncalibrated_softmax` scores. It is a triage aid, *not* a verified
+ownership model. The routing policy never automatically skips
+relationships based on uncalibrated negative predictions, never
+inserts an edge, and requires separate evidence for proposals.
+
+## MCP server, automatically started
+
+The persistent MCP endpoint is:
+
+```text
+http://127.0.0.1:18090/mcp
+```
+
+The default host port can be changed with `AMASS_AI_MCP_PORT`.
+Use a Streamable HTTP-capable MCP client (protocol version
+`2025-11-25`) with HTTP Authorization:
+
+```text
+Authorization: Bearer <token>
+```
+
+The randomly generated token is stored in
+`data/ai/.mcp-token`; do not commit or print it in shared logs.
+Alternatively, export `AMASS_AI_MCP_TOKEN` before startup. The
+server requires a token, validates browser origins, maintains isolated
+MCP sessions and exposes bounded **read-only OAM tools**.
+The host binding is loopback-only by default; do not publish this
+service directly to the public Internet.
+
+The original stdio MCP is preserved as a separate opt-in service
+`ai-mcp-stdio` (profile `ai-stdio`) for trusted local processes.
+
+## AI investigations and existing tools
+
+When the stack is healthy:
 
 ```bash
 docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  --profile ai run --rm ai \
-    -question 'Which organizations are connected to example.org?' \
-    -format json ask
+ -f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml \
+ -f compose.ai-isolation.yaml --profile ai-tools \
+ run --rm ai \
+ -question "Which organizations are connected to example.org?" \
+ -format json ask
 ```
 
-The `ai` service has `/bin/amass ai -config
-/.config/amass/config.yaml` as its entrypoint and accepts ordinary
-`amass ai` flags after it. The service uses the existing PostgreSQL
-database and does not insert newly inferred relationships.
+This uses the provider chosen at environment startup, plus the
+independent classifier service for inference/scan triage.
 
-Configuration precedence is **explicit CLI flag > `AMASS_AI_*`
-environment variable > top-level `ai:` YAML > built-in default**.
+Existing `enum`, `subs`, `assoc`, `track` and `viz` remain
+available. Do not initiate Internet enumeration without explicit
+authorization for the target. Test read-only lookups and legacy
+command compatibility before collecting live data.
 
-The optional `config/config.yaml` section is:
+## Troubleshooting
 
-```yaml
-ai:
-  provider: compatible
-  endpoint: http://ollama:11434/v1/chat/completions
-  model: qwen3:8b
-  allow_http: true
-  model_timeout: 4m
-  investigation_timeout: 12m
-  depth: 8
-  max_matches: 20
-  max_paths_per_asset: 3
-  max_expansions: 120
-  guidance_rounds: 0
-  classifier_review: false
-```
-
-For a local trained classifier, also mount its JSON file into the AI
-service (for example under `./data/ai`) and set
-`AMASS_AI_CLASSIFIER_MODEL=/data/classifier.json`. This is a local,
-task-specific classifier for triage; it is not the generative Qwen model.
-Untrained or task-incompatible classifiers must not be treated as
-relationship evidence.
-
-## Stage 5: legacy behavior, then authorized real-world data
-
-After stages 1–4 pass, exercise the legacy `enum`, `subs`, `assoc`,
-`track` and `viz` workflows against an explicitly authorized test
-domain. Inspect the engine and Asset DB logs, compare graph outputs, and
-only then run `amass ai ask` against the collected OAM graph.
-Never rely on a synthetic test to assert that Internet collection,
-attribution, or third-party source coverage has been validated.
-
-## MCP note
-
-`ai-mcp` is separately opt-in through profile `ai-mcp`, exposes
-stdio only (no published listener), and requires a trusted client.
-Avoid mixing Compose startup output into its JSON-RPC stdout.
-
-## Cleanup
-
-From this disposable checkout only:
+If startup fails, inspect the relevant service:
 
 ```bash
 docker compose \
-  -f compose.yaml \
-  -f compose.ai.yaml \
-  -f compose.ai-stack.yaml \
-  -f compose.ai-isolation.yaml \
-  down
+ -f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml \
+ -f compose.ai-isolation.yaml logs --tail=100 \
+ classifier provider-health ai-mcp ollama
 ```
 
-Bind-mounted test data remains on disk. Review data and backups before
-removing any files. Never run cleanup commands from the original
-non-test Compose checkout.
+An untrained classifier **should not block startup**; it reports that
+state explicitly. In contrast, an invalid model artifact, unreachable
+configured inference provider, wrong model name, or missing MCP token
+is a startup failure. The bearer token is generated by
+`scripts/ai-up.sh`.
 
-**Limitations:** The changes are committed, but a Docker daemon is
-unavailable in the authoring environment. The scripts and Compose
-integration require execution on a Docker host before being considered
-operationally validated. No real-world target has yet been assessed.
+If the database is already initialized from the earlier runbook, the
+script reuses the existing **test** database; it does not delete it.
+Never run `down -v` or remove `assetdb/postgres` unless that test
+data is genuinely disposable.
+
+**Validation status:** The changes are committed on the feature
+branches. Docker build and runtime readiness need execution on your
+Docker host; no live endpoint or trained classifier quality has been
+claimed validated without those checks.
