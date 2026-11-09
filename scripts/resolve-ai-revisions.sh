@@ -51,6 +51,13 @@ export AMASS_AI_AMASS_REF="${AMASS_AI_AMASS_REF:-feature/ai-investigation-infere
 export AMASS_AI_ASSETDB_REF="${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}"
 # AMASS_AI_LOCAL_AMASS (exported or in .env) builds Amass from that local
 # checkout instead of the GitHub branch; asset-db still resolves from GitHub.
+# A key appended to a .env whose last line lacked a newline is glued onto the
+# previous value and silently ignored; refuse to continue in that case.
+if [[ -f .env ]] && grep -Eq '^[^#].*[^[:space:]]AMASS_AI_[A-Z_]+=' .env; then
+  echo "ERROR: .env has an AMASS_AI_* setting joined to the end of another line;" \
+    "put each KEY=value on its own line" >&2
+  return 1 2>/dev/null || exit 1
+fi
 export AMASS_AI_LOCAL_AMASS="${AMASS_AI_LOCAL_AMASS:-$(_amass_dotenv_ref AMASS_AI_LOCAL_AMASS)}"
 if [[ -n "$AMASS_AI_LOCAL_AMASS" ]]; then
   if [[ ! -f "$AMASS_AI_LOCAL_AMASS/go.mod" ]] || ! grep -q '^module github.com/owasp-amass/amass/' "$AMASS_AI_LOCAL_AMASS/go.mod"; then

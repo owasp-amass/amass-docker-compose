@@ -53,7 +53,8 @@ GitHub branch. Asset Database is still cloned at the resolved
 
 ```bash
 # Once, from this checkout (paths are relative to it):
-echo 'AMASS_AI_LOCAL_AMASS=../amass' >> .env
+# The leading \n keeps it off the end of a last line that has no newline.
+printf '\nAMASS_AI_LOCAL_AMASS=../amass\n' >> .env
 
 bash scripts/ai-up.sh          # prints "Building LOCAL amass ... (<commit>, branch ...)"
 ```
