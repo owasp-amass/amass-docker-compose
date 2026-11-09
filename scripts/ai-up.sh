@@ -15,7 +15,7 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p data/ai data/models data/ollama
+mkdir -p data/ai data/models data/ollama data/classifier-training
 # Avoid putting bearer secrets into Git-tracked .env. Reuse a persistent,
 # mode-0600 secret under the isolated bind-mounted test data directory.
 if [[ -z "${AMASS_AI_MCP_TOKEN:-}" ]]; then
@@ -75,6 +75,14 @@ declare -a compose=(
 python3 scripts/check-ai-compose.py
 echo "Building the matching Amass and Asset Database feature image..."
 "${compose[@]}" --profile ai-tools build ai
+
+if [[ -s data/classifier-training/labeled.jsonl ]] && \
+   { [[ ! -s data/models/classifier.json ]] || [[ data/classifier-training/labeled.jsonl -nt data/models/classifier.json ]]; }; then
+  echo "Training the local classifier from curated labeled examples..."
+  "${compose[@]}" --profile ai-train run --rm classifier-train
+elif [[ ! -s data/models/classifier.json ]]; then
+  echo "No trained classifier artifact found; safe untrained escalation mode will be used."
+fi
 
 if (( local_model == 1 )); then
   echo "Starting Ollama and ensuring the configured model is loaded..."
