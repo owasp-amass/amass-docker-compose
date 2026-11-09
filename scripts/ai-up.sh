@@ -57,37 +57,63 @@ PY
 if [[ "$model_endpoint" == http://ollama:11434/* && "$provider" == compatible ]]; then
   export AMASS_AI_ALLOW_HTTP=true
   local_model=1
-  # Keep subsequent plain "docker compose run --rm ai ..." commands working.
-  # This opt-in applies only to the selected trusted internal Ollama endpoint.
-  # No API keys or MCP bearer tokens are written into .env.
-  python3 - <<'PY'
-from pathlib import Path
-file = Path(".env")
-lines = file.read_text().splitlines() if file.exists() else []
-needle = "AMASS_AI_ALLOW_HTTP="
-seen = False
-updated = []
-for line in lines:
-    if line.strip().startswith(needle):
-        if not seen:
-            updated.append("AMASS_AI_ALLOW_HTTP=true")
-            seen = True
-    else:
-        updated.append(line)
-if not seen:
-    updated.extend(["# Trusted internal Ollama only; used by docker compose run ai",
-                    "AMASS_AI_ALLOW_HTTP=true"])
-after = "\n".join(updated).rstrip() + "\n"
-if not file.exists() or file.read_text() != after:
-    file.write_text(after)
-    print("Configured local Ollama HTTP opt-in for direct docker compose run ai commands.")
-PY
+
 else
   local_model=0
   if [[ "$model_endpoint" == http://* ]]; then
     echo "ERROR: external HTTP model endpoints are not enabled by this script. Configure HTTPS." >&2
     exit 1
   fi
+  export AMASS_AI_ALLOW_HTTP=false
+fi
+
+# Keep Docker Compose lifecycle commands consistent across shell invocations.
+# Without COMPOSE_PROFILES=ai-local in .env, plain "docker compose down"
+# omits the previously started profiled Ollama container and cannot
+# remove the project network ("Resource is still in use").
+# Retain any pre-existing other profiles; update only the two managed keys.
+python3 - "$local_model" <<'PY'
+from pathlib import Path
+import sys
+
+local = sys.argv[1] == "1"
+path = Path(".env")
+lines = path.read_text().splitlines() if path.exists() else []
+profiles = []
+for line in lines:
+    if line.strip().startswith("COMPOSE_PROFILES="):
+        raw = line.split("=", 1)[1].strip().strip('"').strip("'")
+        profiles = [p.strip() for p in raw.split(",") if p.strip()]
+        break
+profiles = [p for p in profiles if p != "ai-local"]
+if local:
+    profiles.append("ai-local")
+
+values = {
+    "AMASS_AI_ALLOW_HTTP": "true" if local else "false",
+    "COMPOSE_PROFILES": ",".join(profiles),
+}
+updated = []
+written = set()
+for line in lines:
+    key = line.split("=", 1)[0].strip() if "=" in line else ""
+    if key in values:
+        if key not in written and (values[key] or key == "AMASS_AI_ALLOW_HTTP"):
+            updated.append(f"{key}={values[key]}")
+        written.add(key)
+    else:
+        updated.append(line)
+for key, value in values.items():
+    if key not in written and (value or key == "AMASS_AI_ALLOW_HTTP"):
+        updated.append(f"{key}={value}")
+after = "\n".join(updated).rstrip() + "\n"
+if not path.exists() or path.read_text() != after:
+    path.write_text(after)
+print("Compose lifecycle profile:", values["COMPOSE_PROFILES"] or "default only")
+PY
+if [[ -n "${COMPOSE_PROFILES:-}" && "$local_model" == "1" &&
+      ",$COMPOSE_PROFILES," != *",ai-local,"* ]]; then
+  echo "WARNING: exported COMPOSE_PROFILES overrides .env. Include ai-local when stopping this stack." >&2
 fi
 
 # The feature-branch Compose file now includes the original Amass services,
