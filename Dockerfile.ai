@@ -22,8 +22,12 @@ RUN git clone --single-branch --branch "$ASSETDB_REF" https://github.com/owasp-a
  && printf 'Building pinned commits: asset-db=%s amass=%s\n' "$ASSETDB_SHA" "$AMASS_SHA"
 WORKDIR /src/amass
 # The replacement is for the build stage only, not a committed go.mod edit.
+# Linking the large Amass and engine binaries concurrently can exhaust the
+# Docker Desktop build filesystem (especially on linux/arm64). Limit Go build
+# concurrency and strip debug/symbol tables to lower peak disk consumption.
+# This does not solve an undersized/full Docker disk: see AI.md diagnostics.
 RUN go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
- && CGO_ENABLED=0 go install -v ./...
+ && CGO_ENABLED=0 GOMAXPROCS=2 go install -p 1 -trimpath -ldflags="-s -w" ./...
 # Fail in the builder stage with a specific missing executable instead of
 # an opaque final-stage COPY/checksum error.
 RUN for name in amass amass-ai-mcp amass-ai-mcp-http \
