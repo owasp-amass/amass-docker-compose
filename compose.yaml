@@ -3,7 +3,6 @@
 # The default/release Compose deployment on main is unchanged.
 name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}
 
-# SPDX-License-Identifier: Apache-2.0
 # AI services: use scripts/ai-up.sh for single-command startup.
 x-ai-image: &ai-image
   image: ${AMASS_AI_IMAGE:-amass-ai:dev}
@@ -112,10 +111,10 @@ services:
       - ./data/ai:/data:rw
     ports:
       - "127.0.0.1:${AMASS_AI_MCP_PORT:-18090}:8090"
+    # MCP tools only read the Asset Database; they never call the model or
+    # classifier, so MCP must not wait for a model download or warm-up.
     depends_on:
       assetdb: {condition: service_healthy}
-      classifier: {condition: service_healthy}
-      provider-health: {condition: service_healthy}
     entrypoint: ["/bin/amass-ai-mcp-http", "-config", "/.config/amass/config.yaml"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/readyz"]
@@ -143,7 +142,7 @@ services:
   # Auto-selected by scripts/ai-up.sh for the local Ollama provider.
   ollama:
     profiles: [ai-local]
-    image: ollama/ollama:latest
+    image: ${AMASS_AI_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
     networks: [amass]
     environment:
       OLLAMA_HOST: 0.0.0.0:11434
@@ -160,7 +159,7 @@ services:
   # One-shot initializer: model downloads as part of the same 'up' command.
   ollama-pull:
     profiles: [ai-local]
-    image: ollama/ollama:latest
+    image: ${AMASS_AI_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
     networks: [amass]
     environment:
       OLLAMA_HOST: ollama:11434

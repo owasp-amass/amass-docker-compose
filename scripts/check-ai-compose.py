@@ -76,8 +76,13 @@ def main():
         assert any(v.get("target") == "/data" and not v.get("read_only") for v in mounts), svc
 
     dependencies = services["ai-mcp"].get("depends_on", {})
-    for name in ("assetdb", "classifier", "provider-health"):
-        assert dependencies.get(name, {}).get("condition") == "service_healthy", name
+    assert dependencies.get("assetdb", {}).get("condition") == "service_healthy", "assetdb"
+    for name in ("classifier", "provider-health", "ollama"):
+        assert name not in dependencies, f"read-only MCP must not wait for {name}"
+
+    for name in ("ollama", "ollama-pull"):
+        image = services[name]["image"]
+        assert not image.endswith(":latest") and ":" in image, f"{name} image must be pinned: {image}"
 
     print(f"PASS: project={project}, network={network}")
     print("PASS: collector, engine, classifier, model checker, MCP and Ollama declared")
