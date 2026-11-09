@@ -20,7 +20,11 @@ bash scripts/ai-up.sh
 1. Validates the isolated Compose configuration, creates necessary folders
    and generates a persistent secret under `data/ai/.mcp-token` when
    `AMASS_AI_MCP_TOKEN` is not already set.
-2. Builds the matching Amass and Asset Database feature branches.
+2. Resolves the current Git commit SHA of **both** feature branches and
+   supplies those revisions to Docker as build arguments. This prevents
+   stale cached Go builds from hiding recently added binaries while
+   retaining cache reuse for unchanged commits. Requires GitHub
+   connectivity at startup.
 3. If `data/classifier-training/labeled.jsonl` exists and is newer
    than `data/models/classifier.json`, trains the classifier and saves
    the versioned model. If no labeled data is available, starts deterministic **evidence triage**
@@ -283,3 +287,32 @@ The classifier is used by candidate analysis (`scan` and `infer`).
 Read-only `ask` uses deterministic OAM graph traversal and the source
 provenance dossier; it does not produce ownership predictions merely
 because a classifier service is running.
+
+## Feature image build-cache troubleshooting
+
+The development image previously cloned moving branch names within a cached
+Docker layer. As a result, adding a new command to the Amass feature branch
+could leave `/go/bin/amass-ai-mcp-http`,
+`/go/bin/amass-ai-classifier`, `/go/bin/amass-ai-classifier-train`,
+or `/go/bin/amass-ai-provider-health` missing from a cached builder.
+
+**Fixed:** `scripts/resolve-ai-revisions.sh` queries the two remote
+feature-branch HEADs with `git ls-remote`, validates their SHAs, and exports
+`AMASS_AI_AMASS_SHA` and `AMASS_AI_ASSETDB_SHA`. Both are passed into
+`Dockerfile.ai` and checked out explicitly. The builder now verifies every
+required binary before the final-stage `COPY` operations. This should
+invalidate precisely the source-dependent build layers when either branch
+advances, without requiring `docker builder prune` or deleting volumes.
+
+Always build using `bash scripts/ai-up.sh` or
+`bash scripts/smoke-ai-image.sh`. Direct `docker compose build ai`
+invocations intentionally fail if the immutable source revisions have not
+been resolved. To inspect what revisions are selected without building:
+
+```bash
+source scripts/resolve-ai-revisions.sh
+printf 'amass=%s\nasset-db=%s\n' "$AMASS_AI_AMASS_SHA" "$AMASS_AI_ASSETDB_SHA"
+```
+
+Do **not** run `docker compose down -v` or clear the PostgreSQL/Ollama
+volumes to troubleshoot missing Go binaries; those resources are unrelated.
