@@ -124,12 +124,12 @@ fi
 echo "Starting Amass, classifier, provider health checker and MCP..."
 # The classifier loads its JSON artifact at process startup. Recreate it
 # on each invocation so an updated trained model is never silently stale.
-"${compose[@]}" --profile ai up -d --force-recreate --no-deps classifier
-"${compose[@]}" --profile ai up -d --build --wait --wait-timeout 900 \
+"${compose[@]}" up -d --force-recreate --no-deps classifier
+"${compose[@]}" up -d --build --wait --wait-timeout 900 \
   assetdb syslog postal engine classifier provider-health ai-mcp
 
 echo "AI profile is healthy; model inference connectivity was verified."
-"${compose[@]}" --profile ai ps
+"${compose[@]}" ps
 echo "MCP URL: http://127.0.0.1:${AMASS_AI_MCP_PORT:-18090}/mcp"
 echo "MCP bearer token: data/ai/.mcp-token (unless provided by environment)"
 echo "Classifier state can be inspected with: ${compose[*]} exec -T classifier wget -qO- http://127.0.0.1:8092/v1/model"
