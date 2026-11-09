@@ -14,9 +14,13 @@ RUN go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
  && CGO_ENABLED=0 go install -v ./...
 
 FROM alpine:latest
+# Default 1000:1000 works for most Linux host bind mounts; configurable for
+# other hosts without running the inference client as root.
+ARG AMASS_UID=1000
+ARG AMASS_GID=1000
 RUN apk --no-cache add bash ca-certificates \
- && addgroup -S amass \
- && adduser -S -G amass amass \
+ && addgroup -S -g "$AMASS_GID" amass \
+ && adduser -S -u "$AMASS_UID" -G amass amass \
  && mkdir -p /.config/amass /data \
  && chown -R amass:amass /.config /data
 COPY --from=build /go/bin/amass /bin/amass
