@@ -10,8 +10,7 @@ def main():
     cmd = ["docker", "compose"]
     for path in FILES:
         cmd += ["-f", path]
-    cmd += ["--profile", "ai", "--profile", "ai-tools", "--profile", "ai-stdio",
-            "--profile", "ai-local", "--profile", "ai-train", "config", "--format", "json"]
+    cmd += ["--profile", "ai-stdio", "--profile", "ai-local", "--profile", "ai-train", "config", "--format", "json"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except FileNotFoundError:
@@ -21,7 +20,7 @@ def main():
     # The combined-profile config can be valid while a real command fails:
     # e.g., `--profile ai-tools build ai` if its dependencies are confined
     # to an inactive profile. Validate each exact startup profile separately.
-    for selected_profile in ("ai", "ai-train", "ai-local", "ai-stdio"):
+    for selected_profile in ("ai-train", "ai-local", "ai-stdio"):
         profile_cmd = ["docker", "compose"]
         for name in FILES:
             profile_cmd += ["-f", name]
