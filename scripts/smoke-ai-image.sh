@@ -14,7 +14,7 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 source scripts/resolve-ai-revisions.sh
 python3 scripts/check-ai-compose.py
-declare -a files=(-f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml -f compose.ai-isolation.yaml)
+declare -a files=(-f compose.yaml)
 docker compose "${files[@]}" --profile ai-tools build ai
 # Assert every expected legacy and new binary is present and executable.
 docker compose "${files[@]}" --profile ai-tools run --rm --no-deps \
