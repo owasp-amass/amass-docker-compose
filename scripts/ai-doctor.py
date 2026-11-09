@@ -52,8 +52,8 @@ def main():
     if classifier.get("trained"):
         print("PASS: classifier loaded:",classifier.get("model_id"))
     else:
-        print("PASS: classifier running in explicit untrained escalation mode")
-        print("      Supply human-labeled JSONL under data/classifier-training/labeled.jsonl to train it.")
+        print("PASS: classifier using actual OAM provenance for deterministic review/escalation triage")
+        print("      No supervised weights loaded. Supply independently labeled JSONL to enable trained scoring.")
 
     mcp=f"http://127.0.0.1:{pub}/mcp"
     code,headers,payload=request(mcp,"POST",{
