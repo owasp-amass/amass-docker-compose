@@ -14,11 +14,13 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 python3 scripts/check-ai-compose.py
 declare -a files=(-f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml -f compose.ai-isolation.yaml)
-docker compose "${files[@]}" --profile ai build ai
+docker compose "${files[@]}" --profile ai-tools build ai
 # Assert every expected legacy and new binary is present and executable.
-docker compose "${files[@]}" --profile ai run --rm --no-deps \
+docker compose "${files[@]}" --profile ai-tools run --rm --no-deps \
   --entrypoint /bin/sh ai -euc '
-  for bin in /bin/amass /bin/amass-ai-mcp /bin/enum /bin/engine \
+  for bin in /bin/amass /bin/amass-ai-mcp /bin/amass-ai-mcp-http \
+    /bin/amass-ai-classifier /bin/amass-ai-classifier-train \
+    /bin/amass-ai-provider-health /bin/enum /bin/engine \
     /bin/ae_isready /bin/subs /bin/assoc /bin/viz /bin/track; do
     test -x "$bin" || { echo "MISSING: $bin" >&2; exit 1; }
   done
@@ -26,6 +28,6 @@ docker compose "${files[@]}" --profile ai run --rm --no-deps \
 '
 # Exercise the standalone entrypoint without starting PostgreSQL,
 # performing network collection, or opening an inference connection.
-docker compose "${files[@]}" --profile ai run --rm --no-deps \
+docker compose "${files[@]}" --profile ai-tools run --rm --no-deps \
   --entrypoint /bin/amass ai -version
 echo "PASS: image smoke check; no legacy service or database started"
