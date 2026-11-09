@@ -213,3 +213,44 @@ environment unless you deliberately intend to discard its volumes.**
 A successful Docker build, health check and local read-only query should
 be validated on your host before making claims about actual Internet
 collection or classifier accuracy.
+
+## Docker Desktop storage exhaustion during the Go build
+
+If the image build fails with `/usr/local/go/pkg/tool/linux_arm64/link:
+mapping output file failed: no space left on device`, the **Docker build
+filesystem** has exhausted its available space while linking Amass or
+the engine. The exact error is not a Go type-checking problem and does
+not implicate PostgreSQL or Ollama.
+
+The feature Dockerfile now uses `go install -p 1 -trimpath
+-ldflags="-s -w" ./...` with constrained parallelism, lowering
+concurrent linker peak disk usage and resulting binary sizes. It cannot
+guarantee success if the Docker Desktop disk image has insufficient
+free space.
+
+Inspect consumption without deleting anything:
+
+```bash
+docker system df -v
+docker buildx du
+df -h
+```
+
+On Docker Desktop for macOS, inspect **Settings → Resources → Advanced**
+for the Docker disk image size and available capacity. The macOS host
+may have sufficient free space even though Docker's Linux VM or
+BuildKit storage is full. Increase Docker's disk allocation if
+necessary and available.
+
+If you need to reclaim disk space, first inspect which BuildKit
+caches and images are in use. `docker builder prune` deletes *unused
+build cache*, not the PostgreSQL/Ollama bind mounts, but requires
+explicit review when sharing Docker with other development projects:
+it may cause other projects to rebuild. Avoid automatic `docker
+system prune -a`, `docker volume prune`, or `docker compose down -v`
+in this environment.
+
+After allocating sufficient Docker space, simply rerun
+`bash scripts/ai-up.sh`. The resolved source revisions make the
+feature-image rebuild reproducible. No model download or database
+reset is required.
