@@ -15,6 +15,9 @@ services:
     env_file:
       - ./config/logs/syslog.env
     environment:
+      # The app creates defaults under the user config directory. Keep
+      # those writes in /data, never in the mounted read-only ./config.
+      XDG_CONFIG_HOME: /data/.config
       AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
       AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-compatible}
       AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434/v1/chat/completions}
@@ -42,6 +45,8 @@ services:
     networks: [amass]
     env_file:
       - ./config/logs/syslog.env
+    environment:
+      XDG_CONFIG_HOME: /data/.config
     volumes:
       - ./config:/.config/amass:ro
     depends_on:
