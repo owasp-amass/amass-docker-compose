@@ -73,7 +73,7 @@ declare -a compose=(docker compose)
 source scripts/resolve-ai-revisions.sh
 python3 scripts/check-ai-compose.py
 echo "Building the matching Amass and Asset Database feature image..."
-"${compose[@]}" --profile ai-tools build ai
+"${compose[@]}" build ai
 
 if [[ -s data/classifier-training/labeled.jsonl ]] && \
    { [[ ! -s data/models/classifier.json ]] || [[ data/classifier-training/labeled.jsonl -nt data/models/classifier.json ]]; }; then
