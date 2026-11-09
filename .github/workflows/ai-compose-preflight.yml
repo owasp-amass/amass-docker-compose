@@ -9,6 +9,7 @@ on:
       - 'scripts/check-ai-compose.py'
       - 'scripts/smoke-ai-image.sh'
       - 'scripts/ai-up.sh'
+      - 'scripts/ai-down.sh'
       - 'scripts/resolve-ai-revisions.sh'
       - 'scripts/ai-doctor.py'
       - 'AI.md'
@@ -20,6 +21,7 @@ on:
       - 'scripts/check-ai-compose.py'
       - 'scripts/smoke-ai-image.sh'
       - 'scripts/ai-up.sh'
+      - 'scripts/ai-down.sh'
       - 'scripts/resolve-ai-revisions.sh'
       - 'scripts/ai-doctor.py'
       - 'AI.md'
@@ -38,7 +40,7 @@ jobs:
         run: docker compose version
       - name: Validate startup and diagnostic script syntax
         run: |
-          bash -n scripts/ai-up.sh scripts/resolve-ai-revisions.sh scripts/smoke-ai-image.sh scripts/check-ai-stack-ready.sh
+          bash -n scripts/ai-up.sh scripts/ai-down.sh scripts/resolve-ai-revisions.sh scripts/smoke-ai-image.sh scripts/check-ai-stack-ready.sh
           python3 -m py_compile scripts/check-ai-compose.py scripts/ai-doctor.py
       - name: Validate isolated AI test-stack topology and each startup profile
         run: python3 scripts/check-ai-compose.py
