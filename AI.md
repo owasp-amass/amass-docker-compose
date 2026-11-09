@@ -80,6 +80,23 @@ docker compose run --rm subs -h
 docker compose run --rm assoc -h
 ```
 
+For an exact, schema-grounded cross-type relationship inventory, you can also
+name the OAM labels explicitly:
+
+```bash
+docker compose run --rm ai \
+  -question "Which URLs are connected to tech.acme.example via domain relationships?" \
+  -format json ask
+```
+
+This compiles the query into stored-direction OAM hops when the schema
+contains a unique valid route. Different asset types and multiple
+relationship labels are supported; ambiguous routes fall back to the
+normal LLM planner. The schema-grounded typed engine returns only
+witnessed edges and explicitly reports truncated inventories. The
+supported grammar and caveats are described in
+[Amass intent routing documentation](https://github.com/owasp-amass/amass/blob/feature/ai-investigation-inference/docs/ai/INTENT_ROUTING.md).
+
 Answers reflect **only assets and observations already in the OAM database**.
 Questions do not automatically authorize enumeration or assert true legal
 ownership. The AI command may use deterministic schema grounding and graph
