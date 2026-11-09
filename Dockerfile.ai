@@ -27,6 +27,7 @@ COPY --from=build /go/bin/amass /bin/amass
 COPY --from=build /go/bin/amass-ai-mcp /bin/amass-ai-mcp
 COPY --from=build /go/bin/amass-ai-mcp-http /bin/amass-ai-mcp-http
 COPY --from=build /go/bin/amass-ai-classifier /bin/amass-ai-classifier
+COPY --from=build /go/bin/amass-ai-classifier-train /bin/amass-ai-classifier-train
 COPY --from=build /go/bin/amass-ai-provider-health /bin/amass-ai-provider-health
 COPY --from=build /go/bin/oam_enum /bin/enum
 COPY --from=build /go/bin/amass_engine /bin/engine
