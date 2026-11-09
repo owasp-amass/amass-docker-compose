@@ -58,11 +58,19 @@ print(value or "ollama")
 PY
 )"
 # The internal Ollama service, through its native API or the OpenAI-compatible /v1 API.
+host_model=0
 if [[ ( "$model_endpoint" == http://ollama:11434 || "$model_endpoint" == http://ollama:11434/* ) &&
       ( "$provider" == ollama || "$provider" == compatible ) ]]; then
   export AMASS_AI_ALLOW_HTTP=true
   local_model=1
-
+# Ollama running directly on this computer (on macOS it can use the GPU,
+# which Docker Desktop containers cannot). Containers reach it through
+# host.docker.internal; this script checks it from the host side.
+elif [[ ( "$model_endpoint" == http://host.docker.internal:11434 || "$model_endpoint" == http://host.docker.internal:11434/* ) &&
+        ( "$provider" == ollama || "$provider" == compatible ) ]]; then
+  export AMASS_AI_ALLOW_HTTP=true
+  local_model=0
+  host_model=1
 else
   local_model=0
   if [[ "$model_endpoint" == http://* ]]; then
@@ -77,11 +85,12 @@ fi
 # omits the previously started profiled Ollama container and cannot
 # remove the project network ("Resource is still in use").
 # Retain any pre-existing other profiles; update only the two managed keys.
-python3 - "$local_model" <<'PY'
+python3 - "$local_model" "$host_model" <<'PY'
 from pathlib import Path
 import sys
 
 local = sys.argv[1] == "1"
+host = sys.argv[2] == "1"
 path = Path(".env")
 lines = path.read_text().splitlines() if path.exists() else []
 profiles = []
@@ -95,7 +104,7 @@ if local:
     profiles.append("ai-local")
 
 values = {
-    "AMASS_AI_ALLOW_HTTP": "true" if local else "false",
+    "AMASS_AI_ALLOW_HTTP": "true" if local or host else "false",
     "COMPOSE_PROFILES": ",".join(profiles),
 }
 updated = []
@@ -144,7 +153,25 @@ elif [[ ! -s data/models/classifier.json ]]; then
   echo "No trained classifier artifact found; default OAM evidence triage (review/escalation) will be used."
 fi
 
-if (( local_model == 1 )); then
+if (( host_model == 1 )); then
+  model_name="$("${compose[@]}" config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["ai"]["environment"]["AMASS_AI_MODEL"])')"
+  echo "Using Ollama on this computer for model $model_name..."
+  # Free the memory and CPU held by a previously started in-Docker Ollama.
+  "${compose[@]}" --profile ai-local stop ollama >/dev/null 2>&1 || true
+  if ! tags="$(curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags 2>/dev/null)"; then
+    echo "ERROR: Ollama is not answering on http://127.0.0.1:11434. Start the Ollama app (or 'ollama serve') and rerun." >&2
+    exit 1
+  fi
+  if ! printf '%s' "$tags" | python3 -c 'import json,sys; names={m["name"] for m in json.load(sys.stdin).get("models",[])}; m=sys.argv[1]; sys.exit(0 if m in names or m+":latest" in names else 1)' "$model_name"; then
+    if command -v ollama >/dev/null 2>&1; then
+      echo "Pulling $model_name into the host Ollama..."
+      ollama pull "$model_name"
+    else
+      echo "ERROR: model $model_name is not in the host Ollama. Run: ollama pull $model_name" >&2
+      exit 1
+    fi
+  fi
+elif (( local_model == 1 )); then
   echo "Starting Ollama and ensuring the configured model is loaded..."
   "${compose[@]}" --profile ai-local up -d --wait --wait-timeout 180 ollama
   model_name="$("${compose[@]}" --profile ai-local config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["ollama-pull"]["command"][0])')"

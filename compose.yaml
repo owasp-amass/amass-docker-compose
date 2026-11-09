@@ -10,6 +10,9 @@ name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}
 x-ai-image: &ai-image
   image: ${AMASS_AI_IMAGE:-amass-ai:dev}
   networks: [amass]
+  # Lets AMASS_AI_ENDPOINT=http://host.docker.internal:11434 reach an Ollama
+  # running on the host (built in on Docker Desktop; needed on Linux Engine).
+  extra_hosts: ["host.docker.internal:host-gateway"]
   security_opt: [no-new-privileges:true]
   cap_drop: [ALL]
 

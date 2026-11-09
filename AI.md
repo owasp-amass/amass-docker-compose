@@ -44,6 +44,27 @@ No Internet enumeration or AI-derived database writes are performed by
 startup. Keep your local `.env` and `data/` private. Never commit
 credentials, model weights, or the MCP token.
 
+## Use Ollama on the host for GPU speed (recommended on macOS)
+
+Docker Desktop containers cannot use the Mac's GPU, so the in-Docker
+Ollama runs models on the CPU, and an 8B model can take minutes per
+request. Ollama installed directly on macOS uses Metal and is typically
+an order of magnitude faster. To use it:
+
+1. Install and start Ollama on the Mac (the Ollama app, or `ollama serve`).
+2. Add to `.env` (with a leading newline, as below):
+
+   ```bash
+   printf '\nAMASS_AI_PROVIDER=ollama\nAMASS_AI_ENDPOINT=http://host.docker.internal:11434\n' >> .env
+   ```
+
+3. Run `bash scripts/ai-up.sh`. It checks that the host Ollama answers on
+   `127.0.0.1:11434`, pulls the configured model there if it is missing,
+   stops the in-Docker Ollama and starts the rest of the stack. Containers
+   reach the host through `host.docker.internal`.
+
+Remove the two lines to go back to the in-Docker Ollama.
+
 ## Test a local Amass checkout before pushing
 
 Set `AMASS_AI_LOCAL_AMASS` to a local Amass checkout and the startup script
