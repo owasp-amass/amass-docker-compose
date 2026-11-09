@@ -15,9 +15,9 @@ fi
 source scripts/resolve-ai-revisions.sh
 python3 scripts/check-ai-compose.py
 declare -a files=(-f compose.yaml)
-docker compose "${files[@]}" --profile ai-tools build ai
+docker compose "${files[@]}" build ai
 # Assert every expected legacy and new binary is present and executable.
-docker compose "${files[@]}" --profile ai-tools run --rm --no-deps \
+docker compose "${files[@]}" run --rm --no-deps \
   --entrypoint /bin/sh ai -euc '
   for bin in /bin/amass /bin/amass-ai-mcp /bin/amass-ai-mcp-http \
     /bin/amass-ai-classifier /bin/amass-ai-classifier-train \
@@ -29,6 +29,6 @@ docker compose "${files[@]}" --profile ai-tools run --rm --no-deps \
 '
 # Exercise the standalone entrypoint without starting PostgreSQL,
 # performing network collection, or opening an inference connection.
-docker compose "${files[@]}" --profile ai-tools run --rm --no-deps \
+docker compose "${files[@]}" run --rm --no-deps \
   --entrypoint /bin/amass ai -version
 echo "PASS: image smoke check; no legacy service or database started"
