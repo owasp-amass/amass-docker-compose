@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Required for any disposable Compose regression stack.
+# The baseline compose.yaml contains fixed Docker container names, network
+# name and published DB/Neo4j ports. A separate checkout is NOT sufficient
+# isolation without this overlay.
+#
+# Requires Docker Compose >= 2.24.4 for !override on published port lists.
+name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}
+services:
+  engine:
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-engine
+  assetdb:
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-assetdb
+    ports: !override
+      - "127.0.0.1:${AMASS_TEST_DB_PORT:-55433}:5432"
+  neo4j:
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-neo4j
+    ports: !override
+      - "127.0.0.1:${AMASS_TEST_NEO4J_HTTP_PORT:-17474}:7474"
+      - "127.0.0.1:${AMASS_TEST_NEO4J_BOLT_PORT:-17687}:7687"
+  postal:
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-postal
+  syslog:
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-syslog
+
+networks:
+  amass:
+    name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-net
