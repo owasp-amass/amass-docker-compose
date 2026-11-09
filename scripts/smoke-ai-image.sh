@@ -12,6 +12,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "ERROR: Python 3 is required for static topology verification" >&2
   exit 1
 fi
+source scripts/resolve-ai-revisions.sh
 python3 scripts/check-ai-compose.py
 declare -a files=(-f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml -f compose.ai-isolation.yaml)
 docker compose "${files[@]}" --profile ai-tools build ai
