@@ -5,9 +5,21 @@ FROM golang:1.27.3-alpine AS build
 RUN apk --no-cache add git ca-certificates
 ARG AMASS_REF=feature/ai-investigation-inference
 ARG ASSETDB_REF=feature/ai-investigation-inference
+# Passed by scripts/resolve-ai-revisions.sh. Using resolved commit SHAs
+# invalidates clone/install cache layers when either branch advances,
+# without forcing a full recompile on every startup.
+ARG AMASS_SHA
+ARG ASSETDB_SHA
 WORKDIR /src
+RUN test -n "$AMASS_SHA" && test -n "$ASSETDB_SHA" \
+ || { echo >&2 "ERROR: missing resolved feature SHAs; use scripts/ai-up.sh or scripts/smoke-ai-image.sh"; exit 1; }
 RUN git clone --single-branch --branch "$ASSETDB_REF" https://github.com/owasp-amass/asset-db.git asset-db \
- && git clone --single-branch --branch "$AMASS_REF" https://github.com/owasp-amass/amass.git amass
+ && git clone --single-branch --branch "$AMASS_REF" https://github.com/owasp-amass/amass.git amass \
+ && git -C asset-db checkout --detach "$ASSETDB_SHA" \
+ && git -C amass checkout --detach "$AMASS_SHA" \
+ && test "$(git -C asset-db rev-parse HEAD)" = "$ASSETDB_SHA" \
+ && test "$(git -C amass rev-parse HEAD)" = "$AMASS_SHA" \
+ && printf 'Building pinned commits: asset-db=%s amass=%s\n' "$ASSETDB_SHA" "$AMASS_SHA"
 WORKDIR /src/amass
 # The replacement is for the build stage only, not a committed go.mod edit.
 RUN go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
