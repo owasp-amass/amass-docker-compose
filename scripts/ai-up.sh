@@ -98,6 +98,9 @@ else
 fi
 
 echo "Starting Amass, classifier, provider health checker and MCP..."
+# The classifier loads its JSON artifact at process startup. Recreate it
+# on each invocation so an updated trained model is never silently stale.
+"${compose[@]}" --profile ai up -d --force-recreate --no-deps classifier
 "${compose[@]}" --profile ai up -d --build --wait --wait-timeout 900 \
   assetdb syslog postal engine classifier provider-health ai-mcp
 
