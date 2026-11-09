@@ -11,7 +11,7 @@ def main():
     for path in FILES:
         cmd += ["-f", path]
     cmd += ["--profile", "ai", "--profile", "ai-tools", "--profile", "ai-stdio",
-            "--profile", "ai-local", "config", "--format", "json"]
+            "--profile", "ai-local", "--profile", "ai-train", "config", "--format", "json"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except FileNotFoundError:
@@ -22,7 +22,7 @@ def main():
     services = configuration.get("services", {})
     required = {"enum", "subs", "assoc", "track", "viz", "engine", "assetdb",
                 "postal", "syslog", "ai", "ai-mcp", "ai-mcp-stdio",
-                "classifier", "provider-health", "ollama", "ollama-pull"}
+                "classifier", "classifier-train", "provider-health", "ollama", "ollama-pull"}
     assert not (required - set(services)), "Missing services: " + repr(sorted(required - set(services)))
     project = configuration.get("name", "")
     assert project and project != "amass", "Test project name collides with existing environment"
@@ -34,7 +34,7 @@ def main():
     image = services["ai"].get("image", "")
     assert image and image != "owaspamass/amass:latest", "AI feature image not configured"
     for svc in ("enum", "subs", "assoc", "track", "viz", "engine",
-                "ai", "ai-mcp", "ai-mcp-stdio", "classifier", "provider-health"):
+                "ai", "ai-mcp", "ai-mcp-stdio", "classifier", "classifier-train", "provider-health"):
         assert services[svc].get("image") == image, f"{svc} uses mismatched Amass image"
 
     dbports = services["assetdb"].get("ports", [])
@@ -48,6 +48,7 @@ def main():
     assert mcpports and all(p.get("host_ip") == "127.0.0.1" for p in mcpports),         "MCP must only publish to host loopback"
     assert "ai" in services["ai-mcp"].get("profiles", []), "Persistent MCP must start with AI"
     assert "ai" in services["classifier"].get("profiles", []), "Classifier must start with AI"
+    assert "ai-train" in services["classifier-train"].get("profiles", []), "Training must remain an opt-in job"
     assert "ai" in services["provider-health"].get("profiles", []), "Model probe must start with AI"
     assert "ai-local" in services["ollama"].get("profiles", []), "Ollama must be optional for remote providers"
     assert "ai-tools" in services["ai"].get("profiles", []), "One-shot CLI must not run as a daemon"
