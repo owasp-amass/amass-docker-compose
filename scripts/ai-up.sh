@@ -57,6 +57,31 @@ PY
 if [[ "$model_endpoint" == http://ollama:11434/* && "$provider" == compatible ]]; then
   export AMASS_AI_ALLOW_HTTP=true
   local_model=1
+  # Keep subsequent plain "docker compose run --rm ai ..." commands working.
+  # This opt-in applies only to the selected trusted internal Ollama endpoint.
+  # No API keys or MCP bearer tokens are written into .env.
+  python3 - <<'PY'
+from pathlib import Path
+file = Path(".env")
+lines = file.read_text().splitlines() if file.exists() else []
+needle = "AMASS_AI_ALLOW_HTTP="
+seen = False
+updated = []
+for line in lines:
+    if line.strip().startswith(needle):
+        if not seen:
+            updated.append("AMASS_AI_ALLOW_HTTP=true")
+            seen = True
+    else:
+        updated.append(line)
+if not seen:
+    updated.extend(["# Trusted internal Ollama only; used by docker compose run ai",
+                    "AMASS_AI_ALLOW_HTTP=true"])
+after = "\\n".join(updated).rstrip() + "\\n"
+if not file.exists() or file.read_text() != after:
+    file.write_text(after)
+    print("Configured local Ollama HTTP opt-in for direct docker compose run ai commands.")
+PY
 else
   local_model=0
   if [[ "$model_endpoint" == http://* ]]; then
