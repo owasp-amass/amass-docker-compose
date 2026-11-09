@@ -1,0 +1,42 @@
+name: AI Compose preflight
+
+on:
+  push:
+    branches: [feature/ai-investigation-inference]
+    paths:
+      - 'compose*.yaml'
+      - 'Dockerfile.ai'
+      - 'scripts/check-ai-compose.py'
+      - 'scripts/smoke-ai-image.sh'
+      - '.github/workflows/ai-compose-preflight.yml'
+  pull_request:
+    paths:
+      - 'compose*.yaml'
+      - 'Dockerfile.ai'
+      - 'scripts/check-ai-compose.py'
+      - 'scripts/smoke-ai-image.sh'
+      - '.github/workflows/ai-compose-preflight.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compose-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Compose version
+        run: docker compose version
+      - name: Validate isolated AI test-stack topology
+        run: python3 scripts/check-ai-compose.py
+      - name: Confirm baseline Compose is still valid
+        run: docker compose -f compose.yaml config --quiet
+
+  image-smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build feature image and check CLI binaries (no database startup)
+        run: bash scripts/smoke-ai-image.sh
