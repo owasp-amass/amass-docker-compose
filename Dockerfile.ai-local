@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: Apache-2.0
+# Development-only image that builds Amass from a LOCAL checkout (the
+# "amass-src" build context, set by compose.local-src.yaml) so changes can be
+# tested before they are pushed. Asset Database is still cloned at the
+# resolved feature-branch commit, exactly as in Dockerfile.ai.
+FROM golang:1.27.3-alpine AS build
+RUN apk --no-cache add git ca-certificates
+ARG ASSETDB_REF=feature/ai-investigation-inference
+ARG ASSETDB_SHA
+WORKDIR /src
+RUN test -n "$ASSETDB_SHA" \
+ || { echo >&2 "ERROR: missing resolved asset-db SHA; use scripts/ai-up.sh"; exit 1; }
+RUN git clone --single-branch --branch "$ASSETDB_REF" https://github.com/owasp-amass/asset-db.git asset-db \
+ && git -C asset-db checkout --detach "$ASSETDB_SHA" \
+ && test "$(git -C asset-db rev-parse HEAD)" = "$ASSETDB_SHA"
+# The local checkout, including uncommitted edits. Its own .dockerignore
+# applies; the layer is rebuilt whenever any copied file changes.
+COPY --from=amass-src . /src/amass
+WORKDIR /src/amass
+RUN printf 'Building local Amass checkout with asset-db@%s\n' "$ASSETDB_SHA" \
+ && go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
+ && CGO_ENABLED=0 GOMAXPROCS=2 go install -p 1 -trimpath -ldflags="-s -w" ./...
+RUN for name in amass amass-ai-mcp amass-ai-mcp-http \
+  amass-ai-classifier amass-ai-classifier-train amass-ai-provider-health \
+  oam_enum amass_engine ae_isready oam_subs oam_assoc oam_viz oam_track oam_i2y; do \
+    test -x "/go/bin/$name" || { echo >&2 "ERROR: required executable /go/bin/$name was not built from the local checkout"; exit 1; }; \
+  done
+
+FROM alpine:latest
+# Default 1000:1000 works for most Linux host bind mounts; configurable for
+# other hosts without running the inference client as root.
+ARG AMASS_UID=1000
+ARG AMASS_GID=1000
+RUN apk --no-cache add bash ca-certificates \
+ && addgroup -S -g "$AMASS_GID" amass \
+ && adduser -S -u "$AMASS_UID" -G amass amass \
+ && mkdir -p /.config/amass /data \
+ && chown -R amass:amass /.config /data
+COPY --from=build /go/bin/amass /bin/amass
+COPY --from=build /go/bin/amass-ai-mcp /bin/amass-ai-mcp
+COPY --from=build /go/bin/amass-ai-mcp-http /bin/amass-ai-mcp-http
+COPY --from=build /go/bin/amass-ai-classifier /bin/amass-ai-classifier
+COPY --from=build /go/bin/amass-ai-classifier-train /bin/amass-ai-classifier-train
+COPY --from=build /go/bin/amass-ai-provider-health /bin/amass-ai-provider-health
+COPY --from=build /go/bin/oam_enum /bin/enum
+COPY --from=build /go/bin/amass_engine /bin/engine
+COPY --from=build /go/bin/ae_isready /bin/ae_isready
+COPY --from=build /go/bin/oam_subs /bin/subs
+COPY --from=build /go/bin/oam_assoc /bin/assoc
+COPY --from=build /go/bin/oam_viz /bin/viz
+COPY --from=build /go/bin/oam_track /bin/track
+COPY --from=build /go/bin/oam_i2y /bin/i2y
+ENV HOME=/
+USER amass
+WORKDIR /data
+STOPSIGNAL SIGINT
+ENTRYPOINT ["/bin/amass"]

@@ -44,6 +44,31 @@ No Internet enumeration or AI-derived database writes are performed by
 startup. Keep your local `.env` and `data/` private. Never commit
 credentials, model weights, or the MCP token.
 
+## Test a local Amass checkout before pushing
+
+Set `AMASS_AI_LOCAL_AMASS` to a local Amass checkout and the startup script
+builds the image from it, including uncommitted edits, instead of cloning the
+GitHub branch. Asset Database is still cloned at the resolved
+`feature/ai-investigation-inference` commit.
+
+```bash
+# Once, from this checkout (paths are relative to it):
+echo 'AMASS_AI_LOCAL_AMASS=../amass' >> .env
+
+bash scripts/ai-up.sh          # prints "Building LOCAL amass ... (<commit>, branch ...)"
+```
+
+Rerun `bash scripts/ai-up.sh` after changing the Amass checkout; Docker
+rebuilds only when copied files change. Plain `docker compose build` or
+`up --build` does not apply the overlay and would rebuild from GitHub, so
+rebuild through the script, or pass both files:
+
+```bash
+docker compose -f compose.yaml -f compose.local-src.yaml build ai
+```
+
+Remove the `.env` line (or unset the variable) to return to GitHub builds.
+
 ## Amass subcommand services
 
 The `ai` service is **not** an independent AI application: its entry point

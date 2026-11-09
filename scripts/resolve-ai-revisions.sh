@@ -49,8 +49,28 @@ export AMASS_AI_AMASS_REF="${AMASS_AI_AMASS_REF:-$(_amass_dotenv_ref AMASS_AI_AM
 export AMASS_AI_ASSETDB_REF="${AMASS_AI_ASSETDB_REF:-$(_amass_dotenv_ref AMASS_AI_ASSETDB_REF)}"
 export AMASS_AI_AMASS_REF="${AMASS_AI_AMASS_REF:-feature/ai-investigation-inference}"
 export AMASS_AI_ASSETDB_REF="${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}"
-AMASS_AI_AMASS_SHA="$(_amass_resolve_revision amass "$AMASS_AI_AMASS_REF" amass)" || return 1 2>/dev/null || exit 1
+# AMASS_AI_LOCAL_AMASS (exported or in .env) builds Amass from that local
+# checkout instead of the GitHub branch; asset-db still resolves from GitHub.
+export AMASS_AI_LOCAL_AMASS="${AMASS_AI_LOCAL_AMASS:-$(_amass_dotenv_ref AMASS_AI_LOCAL_AMASS)}"
+if [[ -n "$AMASS_AI_LOCAL_AMASS" ]]; then
+  if [[ ! -f "$AMASS_AI_LOCAL_AMASS/go.mod" ]] || ! grep -q '^module github.com/owasp-amass/amass/' "$AMASS_AI_LOCAL_AMASS/go.mod"; then
+    echo "ERROR: AMASS_AI_LOCAL_AMASS=$AMASS_AI_LOCAL_AMASS is not an Amass checkout" >&2
+    return 1 2>/dev/null || exit 1
+  fi
+  AMASS_AI_LOCAL_AMASS="$(cd "$AMASS_AI_LOCAL_AMASS" && pwd)"
+  export AMASS_AI_LOCAL_AMASS
+  _local_desc="$(git -C "$AMASS_AI_LOCAL_AMASS" describe --always --dirty 2>/dev/null || echo unknown)"
+  _local_branch="$(git -C "$AMASS_AI_LOCAL_AMASS" branch --show-current 2>/dev/null || true)"
+  AMASS_AI_AMASS_SHA="local"
+else
+  AMASS_AI_AMASS_SHA="$(_amass_resolve_revision amass "$AMASS_AI_AMASS_REF" amass)" || return 1 2>/dev/null || exit 1
+fi
 AMASS_AI_ASSETDB_SHA="$(_amass_resolve_revision asset-db "$AMASS_AI_ASSETDB_REF" asset-db)" || return 1 2>/dev/null || exit 1
 export AMASS_AI_AMASS_SHA AMASS_AI_ASSETDB_SHA
-printf 'Building amass@%.12s and asset-db@%.12s (resolved from feature branches)\n' \
-  "$AMASS_AI_AMASS_SHA" "$AMASS_AI_ASSETDB_SHA"
+if [[ -n "$AMASS_AI_LOCAL_AMASS" ]]; then
+  printf 'Building LOCAL amass %s (%s, branch %s) with asset-db@%.12s\n' \
+    "$AMASS_AI_LOCAL_AMASS" "$_local_desc" "${_local_branch:-detached}" "$AMASS_AI_ASSETDB_SHA"
+else
+  printf 'Building amass@%.12s and asset-db@%.12s (resolved from feature branches)\n' \
+    "$AMASS_AI_AMASS_SHA" "$AMASS_AI_ASSETDB_SHA"
+fi

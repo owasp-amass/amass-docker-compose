@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Overlay that builds the AI image from a local Amass checkout instead of the
+# GitHub feature branch. scripts/ai-up.sh applies it when AMASS_AI_LOCAL_AMASS
+# names that checkout (for example ../amass). All AI services share the image.
+services:
+  ai:
+    build:
+      dockerfile: Dockerfile.ai-local
+      additional_contexts:
+        amass-src: ${AMASS_AI_LOCAL_AMASS:?set AMASS_AI_LOCAL_AMASS to a local amass checkout}

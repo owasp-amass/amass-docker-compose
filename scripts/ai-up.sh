@@ -123,6 +123,11 @@ declare -a compose=(docker compose)
 # rebuild cloned Go sources only when either feature branch actually changes.
 source scripts/resolve-ai-revisions.sh
 python3 scripts/check-ai-compose.py
+if [[ -n "$AMASS_AI_LOCAL_AMASS" ]]; then
+  # Build from the local checkout; every later compose call in this script
+  # uses the same overlay so --build never falls back to the GitHub branch.
+  compose=(docker compose -f compose.yaml -f compose.local-src.yaml)
+fi
 echo "Building the matching Amass and Asset Database feature image..."
 "${compose[@]}" build ai
 

@@ -5,7 +5,7 @@ on:
     branches: [feature/ai-investigation-inference]
     paths:
       - 'compose*.yaml'
-      - 'Dockerfile.ai'
+      - 'Dockerfile.ai*'
       - 'scripts/check-ai-compose.py'
       - 'scripts/smoke-ai-image.sh'
       - 'scripts/ai-up.sh'
@@ -17,7 +17,7 @@ on:
   pull_request:
     paths:
       - 'compose*.yaml'
-      - 'Dockerfile.ai'
+      - 'Dockerfile.ai*'
       - 'scripts/check-ai-compose.py'
       - 'scripts/smoke-ai-image.sh'
       - 'scripts/ai-up.sh'
@@ -47,6 +47,12 @@ jobs:
       - name: Confirm default service and AI subcommand resolve from one Compose file
         run: |
           docker compose config --quiet
+      - name: Local-source overlay resolves and refuses to run unset
+        run: |
+          AMASS_AI_LOCAL_AMASS=. docker compose -f compose.yaml -f compose.local-src.yaml config --quiet
+          if docker compose -f compose.yaml -f compose.local-src.yaml config --quiet 2>/dev/null; then
+            echo "overlay must fail without AMASS_AI_LOCAL_AMASS"; exit 1
+          fi
 
   image-smoke:
     if: github.event_name == 'workflow_dispatch'
