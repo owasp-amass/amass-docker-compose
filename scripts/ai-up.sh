@@ -72,6 +72,9 @@ declare -a compose=(
   -f compose.ai-stack.yaml
   -f compose.ai-isolation.yaml
 )
+# Resolve both Git branch tips before rendering Compose, so Docker will
+# rebuild cloned Go sources only when either feature branch actually changes.
+source scripts/resolve-ai-revisions.sh
 python3 scripts/check-ai-compose.py
 echo "Building the matching Amass and Asset Database feature image..."
 "${compose[@]}" --profile ai-tools build ai
@@ -81,7 +84,7 @@ if [[ -s data/classifier-training/labeled.jsonl ]] && \
   echo "Training the local classifier from curated labeled examples..."
   "${compose[@]}" --profile ai-train run --rm classifier-train
 elif [[ ! -s data/models/classifier.json ]]; then
-  echo "No trained classifier artifact found; safe untrained escalation mode will be used."
+  echo "No trained classifier artifact found; default OAM evidence triage (review/escalation) will be used."
 fi
 
 if (( local_model == 1 )); then
