@@ -65,13 +65,9 @@ else
   fi
 fi
 
-declare -a compose=(
-  docker compose
-  -f compose.yaml
-  -f compose.ai.yaml
-  -f compose.ai-stack.yaml
-  -f compose.ai-isolation.yaml
-)
+# The feature-branch Compose file now includes the original Amass services,
+# dedicated `ai` subcommand, classifier, MCP, and the optional model.
+declare -a compose=(docker compose)
 # Resolve both Git branch tips before rendering Compose, so Docker will
 # rebuild cloned Go sources only when either feature branch actually changes.
 source scripts/resolve-ai-revisions.sh
