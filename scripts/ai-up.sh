@@ -77,7 +77,7 @@ for line in lines:
 if not seen:
     updated.extend(["# Trusted internal Ollama only; used by docker compose run ai",
                     "AMASS_AI_ALLOW_HTTP=true"])
-after = "\\n".join(updated).rstrip() + "\\n"
+after = "\n".join(updated).rstrip() + "\n"
 if not file.exists() or file.read_text() != after:
     file.write_text(after)
     print("Configured local Ollama HTTP opt-in for direct docker compose run ai commands.")
