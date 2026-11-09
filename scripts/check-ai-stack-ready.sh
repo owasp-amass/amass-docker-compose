@@ -4,7 +4,7 @@
 # engine services have been explicitly started by the operator.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-declare -a files=(-f compose.yaml -f compose.ai.yaml -f compose.ai-stack.yaml -f compose.ai-isolation.yaml)
+declare -a files=(-f compose.yaml)
 python3 scripts/check-ai-compose.py
 docker compose "${files[@]}" exec -T assetdb pg_isready -U postgres -d postgres
 docker compose "${files[@]}" exec -T engine /bin/ae_isready --host 127.0.0.1
