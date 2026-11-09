@@ -10,7 +10,7 @@ docker compose "${files[@]}" exec -T assetdb pg_isready -U postgres -d postgres
 docker compose "${files[@]}" exec -T engine /bin/ae_isready --host 127.0.0.1
 # The .invalid TLD is reserved; this checks indexed PostgreSQL lookup only,
 # never performs DNS resolution, collection, or inference.
-result="$(docker compose "${files[@]}" --profile ai-tools run --rm --no-deps ai \
+result="$(docker compose "${files[@]}" run --rm --no-deps ai \
   -subject-type FQDN -subject-field name -subject-value amass-preflight-only.invalid \
   -target-types Organization -format json search)"
 printf '%s\n' "$result" | python3 -c '
