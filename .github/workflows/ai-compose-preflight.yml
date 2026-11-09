@@ -34,7 +34,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Docker Compose version
         run: docker compose version
-      - name: Validate isolated AI test-stack topology
+      - name: Validate startup and diagnostic script syntax
+        run: |
+          bash -n scripts/ai-up.sh scripts/smoke-ai-image.sh scripts/check-ai-stack-ready.sh
+          python3 -m py_compile scripts/check-ai-compose.py scripts/ai-doctor.py
+      - name: Validate isolated AI test-stack topology and each startup profile
         run: python3 scripts/check-ai-compose.py
       - name: Confirm baseline Compose is still valid
         run: docker compose -f compose.yaml config --quiet
