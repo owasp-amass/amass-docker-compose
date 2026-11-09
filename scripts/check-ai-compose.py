@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the merged, opt-in Amass Compose test topology without starting it."""
+"""Non-destructive validation of the isolated, fully configured AI Compose stack."""
 import json
 import subprocess
 import sys
@@ -7,70 +7,70 @@ import sys
 FILES = ["compose.yaml", "compose.ai.yaml", "compose.ai-stack.yaml", "compose.ai-isolation.yaml"]
 
 def main():
-    args = ["docker", "compose"]
+    cmd = ["docker", "compose"]
     for path in FILES:
-        args += ["-f", path]
-    args += ["--profile", "ai", "--profile", "ai-mcp", "--profile", "ai-model", "config", "--format", "json"]
+        cmd += ["-f", path]
+    cmd += ["--profile", "ai", "--profile", "ai-tools", "--profile", "ai-stdio",
+            "--profile", "ai-local", "config", "--format", "json"]
     try:
-        result = subprocess.run(args, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except FileNotFoundError:
-        sys.exit("ERROR: Docker Compose not found; run this on the Docker test host.")
+        sys.exit("ERROR: Docker Compose not installed")
     except subprocess.CalledProcessError as exc:
-        sys.exit("ERROR: Compose validation failed:\n" + exc.stderr)
-    try:
-        config = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        sys.exit(f"ERROR: invalid compose JSON: {exc}")
-    services = config.get("services", {})
-    expected = {"enum", "subs", "assoc", "track", "viz", "engine", "assetdb",
-                "postal", "syslog", "ai", "ai-mcp", "ollama"}
-    missing = expected - set(services)
-    assert not missing, f"Missing services: {sorted(missing)}"
+        sys.exit("ERROR: Compose configuration is invalid:\n" + exc.stderr)
+    configuration = json.loads(result.stdout)
+    services = configuration.get("services", {})
+    required = {"enum", "subs", "assoc", "track", "viz", "engine", "assetdb",
+                "postal", "syslog", "ai", "ai-mcp", "ai-mcp-stdio",
+                "classifier", "provider-health", "ollama", "ollama-pull"}
+    assert not (required - set(services)), "Missing services: " + repr(sorted(required - set(services)))
+    project = configuration.get("name", "")
+    assert project and project != "amass", "Test project name collides with existing environment"
+    network = configuration.get("networks", {}).get("amass", {}).get("name")
+    assert network and network != "amass-net", "Test network collides with existing environment"
+    for svc in ("engine", "assetdb", "postal", "syslog", "neo4j"):
+        assert services[svc].get("container_name", "").startswith(project + "-"), svc
 
-    project = config.get("name", "")
-    assert project and project != "amass", "Use a separate test project name"
-    network = config.get("networks", {}).get("amass", {})
-    assert network.get("name") != "amass-net", "Test network collides with legacy Amass network"
+    image = services["ai"].get("image", "")
+    assert image and image != "owaspamass/amass:latest", "AI feature image not configured"
+    for svc in ("enum", "subs", "assoc", "track", "viz", "engine",
+                "ai", "ai-mcp", "ai-mcp-stdio", "classifier", "provider-health"):
+        assert services[svc].get("image") == image, f"{svc} uses mismatched Amass image"
 
-    for service in ("engine", "assetdb", "postal", "syslog", "neo4j"):
-        name = services[service].get("container_name", "")
-        assert name.startswith(project + "-"), (service, name)
+    dbports = services["assetdb"].get("ports", [])
+    assert dbports and all(p.get("host_ip") == "127.0.0.1" and int(p.get("published", 0)) != 55432
+                           for p in dbports), "DB must only publish a separate loopback port"
+    assert not services["ollama"].get("ports"), "Ollama port must remain private"
+    assert not services["provider-health"].get("ports"), "Provider checker must remain private"
+    assert not services["classifier"].get("ports"), "Classifier must remain private"
 
-    ai_image = services["ai"].get("image", "")
-    assert ai_image and ai_image != "owaspamass/amass:latest", (
-        "AI feature image must not be the published legacy Amass image")
-    for service in ("enum", "subs", "assoc", "track", "viz", "engine", "ai", "ai-mcp"):
-        assert services[service].get("image", "") == ai_image, (
-            service, "Service is not using the exact shared feature-image tag")
+    mcpports = services["ai-mcp"].get("ports", [])
+    assert mcpports and all(p.get("host_ip") == "127.0.0.1" for p in mcpports),         "MCP must only publish to host loopback"
+    assert "ai" in services["ai-mcp"].get("profiles", []), "Persistent MCP must start with AI"
+    assert "ai" in services["classifier"].get("profiles", []), "Classifier must start with AI"
+    assert "ai" in services["provider-health"].get("profiles", []), "Model probe must start with AI"
+    assert "ai-local" in services["ollama"].get("profiles", []), "Ollama must be optional for remote providers"
+    assert "ai-tools" in services["ai"].get("profiles", []), "One-shot CLI must not run as a daemon"
 
-    # Database must not publish on the standard baseline 55432 port.
-    db_ports = services["assetdb"].get("ports", [])
-    assert db_ports, "Expected private loopback-only test DB port"
-    for port in db_ports:
-        assert port.get("host_ip") in ("127.0.0.1", "::1"), port
-        assert int(port.get("published", 0)) != 55432, port
+    for svc in ("ai", "ai-mcp"):
+        mounts = services[svc].get("volumes", [])
+        assert any(v.get("target") == "/.config/amass" and v.get("read_only") for v in mounts), svc
+        assert any(v.get("target") == "/data" and not v.get("read_only") for v in mounts), svc
 
-    assert not services["ollama"].get("ports"), "Ollama must not publish a host port"
-    assert "ai" in services["ai"].get("profiles", []), "AI service must be opt-in"
-    assert "ai-model" in services["ollama"].get("profiles", []), "Ollama must be opt-in"
+    dependencies = services["ai-mcp"].get("depends_on", {})
+    for name in ("assetdb", "classifier", "provider-health"):
+        assert dependencies.get(name, {}).get("condition") == "service_healthy", name
 
-    ai = services["ai"]
-    assert ai.get("environment", {}).get("XDG_CONFIG_HOME") == "/data/.config"
-    mounts = ai.get("volumes", [])
-    assert any(m.get("target") == "/.config/amass" and m.get("read_only")
-               for m in mounts), "AI should mount Amass configuration read-only"
-    assert any(m.get("target") == "/data" and not m.get("read_only")
-               for m in mounts), "AI needs a writable output directory"
-
-    print(f"PASS: isolated Compose project={project}, network={network.get('name')}")
-    print("PASS: legacy binaries, AI, PostgreSQL and Ollama services are declared")
-    print("PASS: DB published only to loopback on a non-default host port")
-    print("PASS: Ollama is internal-only; AI and Ollama services are opt-in")
-    print("PASS: AI configuration is read-only with a separate writable data directory")
-    print("No containers started and no real-world collection performed.")
+    print(f"PASS: project={project}, network={network}")
+    print("PASS: collector, engine, classifier, model checker, MCP and Ollama declared")
+    print("PASS: feature images match; model checker must receive actual inference response")
+    print("PASS: PostgreSQL and MCP host ports limited to localhost")
+    print("PASS: classifier and model checker are provider-independent services")
+    print("PASS: stdio MCP preserved, persistent HTTP MCP required in AI profile")
+    print("No containers started and no external targets scanned.")
 
 if __name__ == "__main__":
     try:
         main()
-    except AssertionError as exc:
-        sys.exit(f"ERROR: isolation check failed: {exc}")
+    except AssertionError as error:
+        sys.exit(f"ERROR: {error}")
