@@ -47,7 +47,7 @@ services:
   # Always-on classifier, fully independent of Ollama/Anthropic/etc.
   classifier:
     <<: *ai-image
-    profiles: [ai]
+    profiles: [ai, ai-tools]
     environment:
       AMASS_AI_CLASSIFIER_MODEL: /models/classifier.json
       AMASS_AI_CLASSIFIER_LISTEN: 0.0.0.0:8092
@@ -81,7 +81,7 @@ services:
   # answered a request. Health polling only checks a cached readiness status.
   provider-health:
     <<: *ai-image
-    profiles: [ai]
+    profiles: [ai, ai-tools]
     environment:
       <<: *ai-provider-env
     entrypoint: ["/bin/amass-ai-provider-health"]
