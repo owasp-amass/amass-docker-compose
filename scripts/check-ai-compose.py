@@ -4,7 +4,7 @@ import json
 import subprocess
 import sys
 
-FILES = ["compose.yaml", "compose.ai.yaml", "compose.ai-stack.yaml", "compose.ai-isolation.yaml"]
+FILES = ["compose.yaml"]
 
 def main():
     cmd = ["docker", "compose"]
@@ -60,14 +60,16 @@ def main():
 
     mcpports = services["ai-mcp"].get("ports", [])
     assert mcpports and all(p.get("host_ip") == "127.0.0.1" for p in mcpports),         "MCP must only publish to host loopback"
-    assert "ai" in services["ai-mcp"].get("profiles", []), "Persistent MCP must start with AI"
-    assert "ai" in services["classifier"].get("profiles", []), "Classifier must start with AI"
-    assert "ai-tools" in services["classifier"].get("profiles", []), "CLI must resolve classifier without enabling AI service profile"
-    assert "ai-tools" in services["provider-health"].get("profiles", []), "CLI must resolve provider-health without enabling AI service profile"
+    assert not services["ai-mcp"].get("profiles"), "Persistent MCP must be a normal Compose service"
+    assert not services["classifier"].get("profiles"), "Classifier must be a normal Compose service"
     assert "ai-train" in services["classifier-train"].get("profiles", []), "Training must remain an opt-in job"
-    assert "ai" in services["provider-health"].get("profiles", []), "Model probe must start with AI"
+    assert not services["provider-health"].get("profiles"), "Inference readiness must be a normal Compose service"
     assert "ai-local" in services["ollama"].get("profiles", []), "Ollama must be optional for remote providers"
     assert "ai-tools" in services["ai"].get("profiles", []), "One-shot CLI must not run as a daemon"
+    assert services["ai"].get("entrypoint", [])[:2] == ["/bin/amass", "ai"], (
+        "AI service must invoke the amass ai subcommand, not a separate application")
+    assert services["ai"]["build"]["dockerfile"] == "Dockerfile.ai", (
+        "AI CLI must use the development Amass image build")
 
     for svc in ("ai", "ai-mcp"):
         mounts = services[svc].get("volumes", [])
@@ -82,9 +84,9 @@ def main():
     print("PASS: collector, engine, classifier, model checker, MCP and Ollama declared")
     print("PASS: feature images match; model checker must receive actual inference response")
     print("PASS: PostgreSQL and MCP host ports limited to localhost")
-    print("PASS: ai-tools, ai, ai-train and ai-local profiles resolve independently")
+    print("PASS: one Compose file; core AI support services have no profile dependencies")
     print("PASS: classifier and model checker are provider-independent services")
-    print("PASS: stdio MCP preserved, persistent HTTP MCP required in AI profile")
+    print("PASS: stdio MCP preserved, persistent HTTP MCP declared as normal service")
     print("No containers started and no external targets scanned.")
 
 if __name__ == "__main__":
