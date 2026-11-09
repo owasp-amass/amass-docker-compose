@@ -8,6 +8,9 @@ on:
       - 'Dockerfile.ai'
       - 'scripts/check-ai-compose.py'
       - 'scripts/smoke-ai-image.sh'
+      - 'scripts/ai-up.sh'
+      - 'scripts/ai-doctor.py'
+      - 'AI.md'
       - '.github/workflows/ai-compose-preflight.yml'
   pull_request:
     paths:
@@ -15,6 +18,9 @@ on:
       - 'Dockerfile.ai'
       - 'scripts/check-ai-compose.py'
       - 'scripts/smoke-ai-image.sh'
+      - 'scripts/ai-up.sh'
+      - 'scripts/ai-doctor.py'
+      - 'AI.md'
       - '.github/workflows/ai-compose-preflight.yml'
   workflow_dispatch:
 
