@@ -21,7 +21,7 @@ def main():
     # The combined-profile config can be valid while a real command fails:
     # e.g., `--profile ai-tools build ai` if its dependencies are confined
     # to an inactive profile. Validate each exact startup profile separately.
-    for selected_profile in ("ai-tools", "ai", "ai-train", "ai-local"):
+    for selected_profile in ("ai", "ai-train", "ai-local", "ai-stdio"):
         profile_cmd = ["docker", "compose"]
         for name in FILES:
             profile_cmd += ["-f", name]
@@ -65,7 +65,7 @@ def main():
     assert "ai-train" in services["classifier-train"].get("profiles", []), "Training must remain an opt-in job"
     assert not services["provider-health"].get("profiles"), "Inference readiness must be a normal Compose service"
     assert "ai-local" in services["ollama"].get("profiles", []), "Ollama must be optional for remote providers"
-    assert "ai-tools" in services["ai"].get("profiles", []), "One-shot CLI must not run as a daemon"
+    assert not services["ai"].get("profiles"), "AI must be a normal Compose subcommand service like enum/assoc"
     assert services["ai"].get("entrypoint", [])[:2] == ["/bin/amass", "ai"], (
         "AI service must invoke the amass ai subcommand, not a separate application")
     assert services["ai"]["build"]["dockerfile"] == "Dockerfile.ai", (
@@ -84,7 +84,7 @@ def main():
     print("PASS: collector, engine, classifier, model checker, MCP and Ollama declared")
     print("PASS: feature images match; model checker must receive actual inference response")
     print("PASS: PostgreSQL and MCP host ports limited to localhost")
-    print("PASS: one Compose file; core AI support services have no profile dependencies")
+    print("PASS: one Compose file; ai is an unprofiled first-class Amass subcommand")
     print("PASS: classifier and model checker are provider-independent services")
     print("PASS: stdio MCP preserved, persistent HTTP MCP declared as normal service")
     print("No containers started and no external targets scanned.")
