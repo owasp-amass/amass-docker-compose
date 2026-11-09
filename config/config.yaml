@@ -96,5 +96,5 @@ transformations:
 #   max_matches: 20
 #   max_paths_per_asset: 3
 #   guidance_rounds: 0
-#   classifier_model: /data/classifier.json  # optional trained model
-#   classifier_review: false
+#   classifier_endpoint: http://classifier:8092
+#   classifier_review: true  # trained model routes triage only; never inserts edges
