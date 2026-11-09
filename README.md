@@ -13,7 +13,38 @@
 
 The OWASP Amass Project performs network mapping of attack surfaces and external asset discovery using open source information gathering and active reconnaissance techniques.
 
+## AI feature-branch environment (development)
+
+The `feature/ai-investigation-inference` branch uses **one integrated
+`compose.yaml`** with all existing Amass subcommands, the `amass ai`
+subcommand, classifier, MCP server, and optional inference provider.
+The release deployment on the default branch is unchanged.
+
+After configuring the test checkout and credentials:
+
+```bash
+bash scripts/ai-up.sh
+python3 scripts/ai-doctor.py
+
+# AI is a regular Compose service whose entrypoint is /bin/amass ai
+docker compose run --rm ai -question "Which organizations are associated with owasp.org?" -format text ask
+
+# Legacy subcommands are unchanged
+docker compose run --rm enum -h
+```
+
+**This branch uses isolated test resources by default:** Docker project
+`amass-ai-test`, PostgreSQL on localhost port `55433`, MCP on localhost
+port `18090`, and separate data directories. Do not reuse production
+database volumes or assume the default-branch published images are in use.
+
+See [AI.md](AI.md) for provider settings, classifier training, MCP
+authentication and test-stack checks.
+
 ## Docker Compose Setup Instructions
+
+> The following instructions and port `55432` refer to the ordinary
+> release deployment. For the AI feature branch, use [AI.md](AI.md).
 
 ### Install the Compose Directory
 
