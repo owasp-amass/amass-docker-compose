@@ -18,6 +18,20 @@ def main():
         sys.exit("ERROR: Docker Compose not installed")
     except subprocess.CalledProcessError as exc:
         sys.exit("ERROR: Compose configuration is invalid:\n" + exc.stderr)
+    # The combined-profile config can be valid while a real command fails:
+    # e.g., `--profile ai-tools build ai` if its dependencies are confined
+    # to an inactive profile. Validate each exact startup profile separately.
+    for selected_profile in ("ai-tools", "ai", "ai-train", "ai-local"):
+        profile_cmd = ["docker", "compose"]
+        for name in FILES:
+            profile_cmd += ["-f", name]
+        profile_cmd += ["--profile", selected_profile, "config", "--quiet"]
+        isolated = subprocess.run(profile_cmd, capture_output=True, text=True)
+        if isolated.returncode:
+            sys.exit(
+                f"ERROR: Compose profile {selected_profile} has invalid dependencies:\n"
+                + isolated.stderr
+            )
     configuration = json.loads(result.stdout)
     services = configuration.get("services", {})
     required = {"enum", "subs", "assoc", "track", "viz", "engine", "assetdb",
@@ -48,6 +62,8 @@ def main():
     assert mcpports and all(p.get("host_ip") == "127.0.0.1" for p in mcpports),         "MCP must only publish to host loopback"
     assert "ai" in services["ai-mcp"].get("profiles", []), "Persistent MCP must start with AI"
     assert "ai" in services["classifier"].get("profiles", []), "Classifier must start with AI"
+    assert "ai-tools" in services["classifier"].get("profiles", []), "CLI must resolve classifier without enabling AI service profile"
+    assert "ai-tools" in services["provider-health"].get("profiles", []), "CLI must resolve provider-health without enabling AI service profile"
     assert "ai-train" in services["classifier-train"].get("profiles", []), "Training must remain an opt-in job"
     assert "ai" in services["provider-health"].get("profiles", []), "Model probe must start with AI"
     assert "ai-local" in services["ollama"].get("profiles", []), "Ollama must be optional for remote providers"
@@ -66,6 +82,7 @@ def main():
     print("PASS: collector, engine, classifier, model checker, MCP and Ollama declared")
     print("PASS: feature images match; model checker must receive actual inference response")
     print("PASS: PostgreSQL and MCP host ports limited to localhost")
+    print("PASS: ai-tools, ai, ai-train and ai-local profiles resolve independently")
     print("PASS: classifier and model checker are provider-independent services")
     print("PASS: stdio MCP preserved, persistent HTTP MCP required in AI profile")
     print("No containers started and no external targets scanned.")
