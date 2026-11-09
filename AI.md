@@ -140,9 +140,11 @@ environment settings, which override the YAML section.
 For local inference:
 
 ```dotenv
-AMASS_AI_PROVIDER=compatible
-AMASS_AI_ENDPOINT=http://ollama:11434/v1/chat/completions
+AMASS_AI_PROVIDER=ollama
+AMASS_AI_ENDPOINT=http://ollama:11434
 AMASS_AI_MODEL=qwen3:8b
+AMASS_AI_THINK=false
+AMASS_AI_CONTEXT_TOKENS=8192
 AMASS_AI_MODEL_TIMEOUT=4m
 AMASS_AI_INVESTIGATION_TIMEOUT=12m
 ```

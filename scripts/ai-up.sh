@@ -43,7 +43,7 @@ if not value and Path(".env").exists():
     for line in Path(".env").read_text().splitlines():
         if line.strip().startswith("AMASS_AI_ENDPOINT="):
             value=line.split("=",1)[1].strip().strip('"').strip("'")
-print(value or "http://ollama:11434/v1/chat/completions")
+print(value or "http://ollama:11434")
 PY
 )"
 provider="$(python3 - <<'PY'
@@ -54,10 +54,12 @@ if not value and Path(".env").exists():
     for line in Path(".env").read_text().splitlines():
         if line.strip().startswith("AMASS_AI_PROVIDER="):
             value=line.split("=",1)[1].strip().strip('"').strip("'")
-print(value or "compatible")
+print(value or "ollama")
 PY
 )"
-if [[ "$model_endpoint" == http://ollama:11434/* && "$provider" == compatible ]]; then
+# The internal Ollama service, through its native API or the OpenAI-compatible /v1 API.
+if [[ ( "$model_endpoint" == http://ollama:11434 || "$model_endpoint" == http://ollama:11434/* ) &&
+      ( "$provider" == ollama || "$provider" == compatible ) ]]; then
   export AMASS_AI_ALLOW_HTTP=true
   local_model=1
 

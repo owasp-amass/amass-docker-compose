@@ -14,8 +14,11 @@ x-ai-image: &ai-image
   cap_drop: [ALL]
 
 x-ai-provider-env: &ai-provider-env
-  AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-compatible}
-  AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434/v1/chat/completions}
+  # Native Ollama API: thinking off, 8K context, schema-constrained planning.
+  AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-ollama}
+  AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434}
+  AMASS_AI_THINK: ${AMASS_AI_THINK:-false}
+  AMASS_AI_CONTEXT_TOKENS: ${AMASS_AI_CONTEXT_TOKENS:-8192}
   AMASS_AI_MODEL: ${AMASS_AI_MODEL:-qwen3:8b}
   AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
   AMASS_AI_ALLOW_HTTP: ${AMASS_AI_ALLOW_HTTP:-false}
