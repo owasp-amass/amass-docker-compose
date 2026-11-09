@@ -24,6 +24,13 @@ WORKDIR /src/amass
 # The replacement is for the build stage only, not a committed go.mod edit.
 RUN go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
  && CGO_ENABLED=0 go install -v ./...
+# Fail in the builder stage with a specific missing executable instead of
+# an opaque final-stage COPY/checksum error.
+RUN for name in amass amass-ai-mcp amass-ai-mcp-http \
+  amass-ai-classifier amass-ai-classifier-train amass-ai-provider-health \
+  oam_enum amass_engine ae_isready oam_subs oam_assoc oam_viz oam_track oam_i2y; do \
+    test -x "/go/bin/$name" || { echo >&2 "ERROR: required executable /go/bin/$name was not installed from pinned Amass commit $AMASS_SHA"; exit 1; }; \
+  done
 
 FROM alpine:latest
 # Default 1000:1000 works for most Linux host bind mounts; configurable for
