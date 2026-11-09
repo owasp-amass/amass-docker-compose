@@ -62,6 +62,21 @@ services:
       retries: 8
     restart: unless-stopped
 
+  # On-demand curated training job. The startup script runs this only if
+  # labeled.jsonl exists and classifier.json has not yet been produced.
+  classifier-train:
+    <<: *ai-image
+    profiles: [ai-train]
+    volumes:
+      - ./data/classifier-training:/training:ro
+      - ./data/models:/models:rw
+    entrypoint: ["/bin/amass-ai-classifier-train"]
+    command:
+      - -input
+      - /training/labeled.jsonl
+      - -output
+      - /models/classifier.json
+
   # Actual inference probe; reports unhealthy until the selected MODEL has
   # answered a request. Health polling only checks a cached readiness status.
   provider-health:
