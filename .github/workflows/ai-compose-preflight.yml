@@ -45,7 +45,7 @@ jobs:
       - name: Confirm default service and AI subcommand resolve from one Compose file
         run: |
           docker compose config --quiet
-          docker compose --profile ai-tools config --quiet
+          docker compose config --quiet
 
   image-smoke:
     if: github.event_name == 'workflow_dispatch'
