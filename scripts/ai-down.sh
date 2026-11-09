@@ -5,7 +5,8 @@
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 docker compose --profile ai-local --profile ai-train --profile ai-stdio down
-network="${AMASS_TEST_NAMESPACE:-amass-ai-test}-net"
+# Resolve the network name using Compose interpolation (including .env).
+network="$(docker compose config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["networks"]["amass"]["name"])')"
 # Compose only removes an otherwise unused network. If another container
 # remains attached, report the owner; never force-disconnect someone else's
 # container or delete persistent data.
