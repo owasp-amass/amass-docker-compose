@@ -11,8 +11,7 @@ FILES=["compose.yaml"]
 COMPOSE=["docker","compose"]
 for item in FILES:
     COMPOSE+=["-f",item]
-# Explicitly activate AI-profile services for every exec, not just config.
-COMPOSE+=["--profile","ai"]
+# The long-running MCP/classifier/provider services are now unprofiled.
 
 def run(*args):
     r=subprocess.run(args,capture_output=True,text=True)
