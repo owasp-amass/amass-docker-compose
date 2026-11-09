@@ -1,0 +1,7 @@
+# Local AI test assets, model weights, labeled cases and bearer tokens
+/data/
+/*.local
+/.env.local
+/.env.ai.local
+__pycache__/
+*.pyc
