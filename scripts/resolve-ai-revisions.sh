@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
+# Copyright © by Jeff Foley 2017-2026. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
 # SPDX-License-Identifier: Apache-2.0
+
 # Source this file from the AI startup/smoke scripts.
 # Resolve BOTH development-branch tips to immutable commits before Compose
 # builds the image. Branch names alone cannot invalidate Docker clone cache.

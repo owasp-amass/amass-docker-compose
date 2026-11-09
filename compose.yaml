@@ -1,4 +1,7 @@
+# Copyright © by Jeff Foley 2017-2026. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
 # SPDX-License-Identifier: Apache-2.0
+
 # Single-file, isolated feature-branch Amass environment.
 # The default/release Compose deployment on main is unchanged.
 name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}
