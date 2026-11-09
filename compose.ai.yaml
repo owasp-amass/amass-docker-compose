@@ -27,6 +27,8 @@ services:
       args:
         AMASS_REF: ${AMASS_AI_AMASS_REF:-feature/ai-investigation-inference}
         ASSETDB_REF: ${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}
+        AMASS_SHA: ${AMASS_AI_AMASS_SHA:-}
+        ASSETDB_SHA: ${AMASS_AI_ASSETDB_SHA:-}
         AMASS_UID: ${AMASS_AI_UID:-1000}
         AMASS_GID: ${AMASS_AI_GID:-1000}
     env_file: [./config/logs/syslog.env]
