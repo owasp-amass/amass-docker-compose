@@ -42,8 +42,10 @@ jobs:
           python3 -m py_compile scripts/check-ai-compose.py scripts/ai-doctor.py
       - name: Validate isolated AI test-stack topology and each startup profile
         run: python3 scripts/check-ai-compose.py
-      - name: Confirm baseline Compose is still valid
-        run: docker compose -f compose.yaml config --quiet
+      - name: Confirm default service and AI subcommand resolve from one Compose file
+        run: |
+          docker compose config --quiet
+          docker compose --profile ai-tools config --quiet
 
   image-smoke:
     if: github.event_name == 'workflow_dispatch'
