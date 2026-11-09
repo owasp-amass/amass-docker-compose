@@ -1,6 +1,176 @@
+# SPDX-License-Identifier: Apache-2.0
+# Single-file, isolated feature-branch Amass environment.
+# The default/release Compose deployment on main is unchanged.
+name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}
+
+# SPDX-License-Identifier: Apache-2.0
+# AI services: use scripts/ai-up.sh for single-command startup.
+x-ai-image: &ai-image
+  image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+  networks: [amass]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+x-ai-provider-env: &ai-provider-env
+  AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-compatible}
+  AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434/v1/chat/completions}
+  AMASS_AI_MODEL: ${AMASS_AI_MODEL:-qwen3:8b}
+  AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
+  AMASS_AI_ALLOW_HTTP: ${AMASS_AI_ALLOW_HTTP:-false}
+  AMASS_AI_MODEL_TIMEOUT: ${AMASS_AI_MODEL_TIMEOUT:-4m}
+  AMASS_AI_INVESTIGATION_TIMEOUT: ${AMASS_AI_INVESTIGATION_TIMEOUT:-12m}
+
 services:
+
+  # Optional CLI for ad-hoc investigations; NOT a daemon on 'up -d'.
+  ai:
+    <<: *ai-image
+    profiles: [ai-tools]
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+      args:
+        AMASS_REF: ${AMASS_AI_AMASS_REF:-feature/ai-investigation-inference}
+        ASSETDB_REF: ${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}
+        AMASS_SHA: ${AMASS_AI_AMASS_SHA:-}
+        ASSETDB_SHA: ${AMASS_AI_ASSETDB_SHA:-}
+        AMASS_UID: ${AMASS_AI_UID:-1000}
+        AMASS_GID: ${AMASS_AI_GID:-1000}
+    env_file: [./config/logs/syslog.env]
+    environment:
+      <<: *ai-provider-env
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_AI_CLASSIFIER_ENDPOINT: http://classifier:8092
+      AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
+    depends_on:
+      assetdb: {condition: service_healthy}
+      classifier: {condition: service_healthy}
+      provider-health: {condition: service_healthy}
+    entrypoint: ["/bin/amass", "ai", "-config", "/.config/amass/config.yaml"]
+
+  # Always-on classifier, fully independent of Ollama/Anthropic/etc.
+  classifier:
+    <<: *ai-image
+    environment:
+      AMASS_AI_CLASSIFIER_MODEL: /models/classifier.json
+      AMASS_AI_CLASSIFIER_LISTEN: 0.0.0.0:8092
+    volumes:
+      - ./data/models:/models:ro
+    entrypoint: ["/bin/amass-ai-classifier"]
+    expose: ["8092"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8092/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+  # On-demand curated training job. The startup script runs this only if
+  # labeled.jsonl exists and classifier.json has not yet been produced.
+  classifier-train:
+    <<: *ai-image
+    profiles: [ai-train]
+    volumes:
+      - ./data/classifier-training:/training:ro
+      - ./data/models:/models:rw
+    entrypoint: ["/bin/amass-ai-classifier-train"]
+    command:
+      - -input
+      - /training/labeled.jsonl
+      - -output
+      - /models/classifier.json
+
+  # Actual inference probe; reports unhealthy until the selected MODEL has
+  # answered a request. Health polling only checks a cached readiness status.
+  provider-health:
+    <<: *ai-image
+    environment:
+      <<: *ai-provider-env
+    entrypoint: ["/bin/amass-ai-provider-health"]
+    expose: ["8091"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8091/readyz"]
+      interval: 20s
+      timeout: 5s
+      start_period: 10m
+      retries: 3
+    restart: unless-stopped
+
+  # Persistent, authenticated read-only Streamable HTTP MCP server.
+  ai-mcp:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_AI_MCP_TOKEN: ${AMASS_AI_MCP_TOKEN:-}
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
+    ports:
+      - "127.0.0.1:${AMASS_AI_MCP_PORT:-18090}:8090"
+    depends_on:
+      assetdb: {condition: service_healthy}
+      classifier: {condition: service_healthy}
+      provider-health: {condition: service_healthy}
+    entrypoint: ["/bin/amass-ai-mcp-http", "-config", "/.config/amass/config.yaml"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+  # Backward-compatible stdio MCP, only when explicitly run by an MCP client.
+  ai-mcp-stdio:
+    <<: *ai-image
+    profiles: [ai-stdio]
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
+    depends_on:
+      assetdb: {condition: service_healthy}
+    stdin_open: true
+    tty: false
+    entrypoint: ["/bin/amass-ai-mcp", "-config", "/.config/amass/config.yaml"]
+
+  # Auto-selected by scripts/ai-up.sh for the local Ollama provider.
+  ollama:
+    profiles: [ai-local]
+    image: ollama/ollama:latest
+    networks: [amass]
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ./data/ollama:/root/.ollama:rw
+    expose: ["11434"]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 8
+    restart: unless-stopped
+
+  # One-shot initializer: model downloads as part of the same 'up' command.
+  ollama-pull:
+    profiles: [ai-local]
+    image: ollama/ollama:latest
+    networks: [amass]
+    environment:
+      OLLAMA_HOST: ollama:11434
+    entrypoint: ["/bin/ollama", "pull"]
+    command: ["${AMASS_AI_MODEL:-qwen3:8b}"]
+    depends_on:
+      ollama: {condition: service_healthy}
+    restart: "no"
+
   enum:
-    image: owaspamass/amass:latest
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -16,7 +186,7 @@ services:
     entrypoint: /bin/enum
 
   viz:
-    image: owaspamass/amass:latest
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -34,7 +204,7 @@ services:
     entrypoint: /bin/viz
 
   subs:
-    image: owaspamass/amass:latest
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -52,7 +222,7 @@ services:
     entrypoint: /bin/subs
 
   assoc:
-    image: owaspamass/amass:latest
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -70,7 +240,7 @@ services:
     entrypoint: /bin/assoc
 
   track:
-    image: owaspamass/amass:latest
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -88,8 +258,8 @@ services:
     entrypoint: /bin/track
 
   engine:
-    image: owaspamass/amass:latest
-    container_name: engine
+    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-engine
     working_dir: /.config/amass
     networks:
       - amass
@@ -128,9 +298,9 @@ services:
     entrypoint: /bin/engine
 
   assetdb:
-    build: https://github.com/owasp-amass/asset-db.git#main
+    build: https://github.com/owasp-amass/asset-db.git#feature/ai-investigation-inference
     shm_size: '4gb'
-    container_name: assetdb
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-assetdb
     networks:
       - amass
     volumes:
@@ -142,7 +312,7 @@ services:
       - AMASS_USER=${AMASS_USER}
       - AMASS_PASSWORD=${AMASS_PASSWORD}
     ports:
-      - "55432:5432"
+      - "127.0.0.1:${AMASS_TEST_DB_PORT:-55433}:5432"
     deploy:
       restart_policy:
         condition: any
@@ -157,7 +327,7 @@ services:
 
   neo4j:
     image: neo4j:latest
-    container_name: neo4j
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-neo4j
     networks:
       - amass
     volumes:
@@ -166,8 +336,8 @@ services:
       - NEO4J_AUTH=neo4j/${AMASS_PASSWORD}
       - NEO4J_server_memory_heap_max__size=4G
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:${AMASS_TEST_NEO4J_HTTP_PORT:-17474}:7474"
+      - "127.0.0.1:${AMASS_TEST_NEO4J_BOLT_PORT:-17687}:7687"
     deploy:
       restart_policy:
         condition: any
@@ -182,7 +352,7 @@ services:
 
   postal:
     build: https://github.com/owasp-amass/libpostal-rest-api.git#main
-    container_name: postal
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-postal
     networks:
       - amass
     environment:
@@ -212,7 +382,7 @@ services:
 
   syslog:
     image: lscr.io/linuxserver/syslog-ng:latest
-    container_name: syslog
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-syslog
     networks:
       - amass
     environment:
@@ -236,4 +406,4 @@ services:
 networks:
   amass:
     driver: bridge
-    name: amass-net
+    name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-net
