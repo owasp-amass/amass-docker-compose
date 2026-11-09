@@ -26,6 +26,27 @@ _amass_resolve_revision() {
   printf '%s' "$sha"
 }
 
+# Match Docker Compose precedence: exported variables override the local .env.
+# Read only these two literal values; never execute contents of .env.
+_amass_dotenv_ref() {
+  python3 - "$1" <<'PY'
+import sys
+from pathlib import Path
+key = sys.argv[1]
+path = Path(".env")
+if path.exists():
+    for raw in path.read_text().splitlines():
+        line = raw.strip()
+        if line.startswith(key + "="):
+            value = line.split("=", 1)[1].strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                value = value[1:-1]
+            print(value)
+            break
+PY
+}
+export AMASS_AI_AMASS_REF="${AMASS_AI_AMASS_REF:-$(_amass_dotenv_ref AMASS_AI_AMASS_REF)}"
+export AMASS_AI_ASSETDB_REF="${AMASS_AI_ASSETDB_REF:-$(_amass_dotenv_ref AMASS_AI_ASSETDB_REF)}"
 export AMASS_AI_AMASS_REF="${AMASS_AI_AMASS_REF:-feature/ai-investigation-inference}"
 export AMASS_AI_ASSETDB_REF="${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}"
 AMASS_AI_AMASS_SHA="$(_amass_resolve_revision amass "$AMASS_AI_AMASS_REF" amass)" || return 1 2>/dev/null || exit 1
