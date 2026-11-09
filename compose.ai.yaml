@@ -1,10 +1,26 @@
 # SPDX-License-Identifier: Apache-2.0
-# Optional Amass AI services; requires an AI-enabled Amass image.
-# See AI.md for build and usage.
+# AI services: use scripts/ai-up.sh for single-command startup.
+# Existing Compose services remain defined in compose.yaml.
+x-ai-image: &ai-image
+  image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+  networks: [amass]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+x-ai-provider-env: &ai-provider-env
+  AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-compatible}
+  AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434/v1/chat/completions}
+  AMASS_AI_MODEL: ${AMASS_AI_MODEL:-qwen3:8b}
+  AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
+  AMASS_AI_ALLOW_HTTP: ${AMASS_AI_ALLOW_HTTP:-true}
+  AMASS_AI_MODEL_TIMEOUT: ${AMASS_AI_MODEL_TIMEOUT:-4m}
+  AMASS_AI_INVESTIGATION_TIMEOUT: ${AMASS_AI_INVESTIGATION_TIMEOUT:-12m}
+
 services:
+  # Optional CLI for ad-hoc investigations; NOT a daemon on 'up -d'.
   ai:
-    profiles: [ai]
-    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    <<: *ai-image
+    profiles: [ai-tools]
     build:
       context: .
       dockerfile: Dockerfile.ai
@@ -13,69 +29,123 @@ services:
         ASSETDB_REF: ${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}
         AMASS_UID: ${AMASS_AI_UID:-1000}
         AMASS_GID: ${AMASS_AI_GID:-1000}
-    networks: [amass]
-    env_file:
-      - ./config/logs/syslog.env
+    env_file: [./config/logs/syslog.env]
     environment:
-      # The app creates defaults under the user config directory. Keep
-      # those writes in /data, never in the mounted read-only ./config.
+      <<: *ai-provider-env
       XDG_CONFIG_HOME: /data/.config
-      AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
-      AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-compatible}
-      AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434/v1/chat/completions}
-      AMASS_AI_MODEL: ${AMASS_AI_MODEL:-qwen3:8b}
-      # Explicit opt-in for trusted container-network HTTP. Do not enable
-      # for an untrusted remote provider.
-      AMASS_AI_ALLOW_HTTP: ${AMASS_AI_ALLOW_HTTP:-false}
-      AMASS_AI_MODEL_TIMEOUT: ${AMASS_AI_MODEL_TIMEOUT:-4m}
-      AMASS_AI_INVESTIGATION_TIMEOUT: ${AMASS_AI_INVESTIGATION_TIMEOUT:-12m}
-      AMASS_AI_CLASSIFIER_MODEL: ${AMASS_AI_CLASSIFIER_MODEL:-}
-      AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-false}
+      AMASS_AI_CLASSIFIER_ENDPOINT: http://classifier:8092
+      AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
     volumes:
       - ./config:/.config/amass:ro
       - ./data/ai:/data:rw
     depends_on:
-      assetdb:
-        condition: service_healthy
+      assetdb: {condition: service_healthy}
+      classifier: {condition: service_healthy}
+      provider-health: {condition: service_healthy}
     entrypoint: ["/bin/amass", "ai", "-config", "/.config/amass/config.yaml"]
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
 
+  # Always-on classifier, fully independent of Ollama/Anthropic/etc.
+  classifier:
+    <<: *ai-image
+    profiles: [ai]
+    environment:
+      AMASS_AI_CLASSIFIER_MODEL: /models/classifier.json
+      AMASS_AI_CLASSIFIER_LISTEN: 0.0.0.0:8092
+    volumes:
+      - ./data/models:/models:ro
+    entrypoint: ["/bin/amass-ai-classifier"]
+    expose: ["8092"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8092/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+  # Actual inference probe; reports unhealthy until the selected MODEL has
+  # answered a request. Health polling only checks a cached readiness status.
+  provider-health:
+    <<: *ai-image
+    profiles: [ai]
+    environment:
+      <<: *ai-provider-env
+    entrypoint: ["/bin/amass-ai-provider-health"]
+    expose: ["8091"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8091/readyz"]
+      interval: 20s
+      timeout: 5s
+      start_period: 10m
+      retries: 3
+    restart: unless-stopped
+
+  # Persistent, authenticated read-only Streamable HTTP MCP server.
   ai-mcp:
-    profiles: [ai-mcp]
-    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
-    networks: [amass]
-    env_file:
-      - ./config/logs/syslog.env
+    <<: *ai-image
+    profiles: [ai]
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_AI_MCP_TOKEN: ${AMASS_AI_MCP_TOKEN:-}
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
+    ports:
+      - "127.0.0.1:${AMASS_AI_MCP_PORT:-18090}:8090"
+    depends_on:
+      assetdb: {condition: service_healthy}
+      classifier: {condition: service_healthy}
+      provider-health: {condition: service_healthy}
+    entrypoint: ["/bin/amass-ai-mcp-http", "-config", "/.config/amass/config.yaml"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+  # Backward-compatible stdio MCP, only when explicitly run by an MCP client.
+  ai-mcp-stdio:
+    <<: *ai-image
+    profiles: [ai-stdio]
+    env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
     volumes:
       - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
     depends_on:
-      assetdb:
-        condition: service_healthy
+      assetdb: {condition: service_healthy}
     stdin_open: true
     tty: false
     entrypoint: ["/bin/amass-ai-mcp", "-config", "/.config/amass/config.yaml"]
-    security_opt: [no-new-privileges:true]
-    cap_drop: [ALL]
 
-
-  # Opt-in local inference service. The model is not downloaded until the
-  # user runs "docker compose ... exec ollama ollama pull <model>".
-  # No host port is published: model traffic stays on the Compose network.
+  # Auto-selected by scripts/ai-up.sh for the local Ollama provider.
   ollama:
-    profiles: [ai-model]
+    profiles: [ai-local]
     image: ollama/ollama:latest
     networks: [amass]
     environment:
       OLLAMA_HOST: 0.0.0.0:11434
     volumes:
       - ./data/ollama:/root/.ollama:rw
-    expose:
-      - "11434"
+    expose: ["11434"]
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 20s
       timeout: 10s
-      retries: 6
+      retries: 8
+    restart: unless-stopped
+
+  # One-shot initializer: model downloads as part of the same 'up' command.
+  ollama-pull:
+    profiles: [ai-local]
+    image: ollama/ollama:latest
+    networks: [amass]
+    environment:
+      OLLAMA_HOST: ollama:11434
+    entrypoint: ["/bin/ollama", "pull"]
+    command: ["${AMASS_AI_MODEL:-qwen3:8b}"]
+    depends_on:
+      ollama: {condition: service_healthy}
+    restart: "no"
