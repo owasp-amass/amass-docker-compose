@@ -49,6 +49,8 @@ services:
     environment:
       <<: *ai-provider-env
       XDG_CONFIG_HOME: /data/.config
+      # The review journal the engine's automatic attribution also uses.
+      AMASS_AI_JOURNAL: /data/ai-review.jsonl
       AMASS_AI_CLASSIFIER_ENDPOINT: http://classifier:8092
       AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
     volumes:
@@ -275,10 +277,15 @@ services:
     environment:
       - POSTAL_SERVER_HOST=postal
       - POSTAL_SERVER_PORT=8000
+      # Ownership attribution during enumeration (auto, journal or off); it
+      # shares its review journal with the ai service through ./data/ai.
+      - AMASS_AI_ATTRIBUTION=${AMASS_AI_ATTRIBUTION:-auto}
+      - AMASS_AI_JOURNAL=/ai/ai-review.jsonl
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./data/engine:/.config/amass:rw
+      - ./data/ai:/ai:rw
     expose: 
       - "4000"
     deploy:

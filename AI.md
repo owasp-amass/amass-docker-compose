@@ -162,6 +162,35 @@ needed. The default classifier evaluates existing OAM provenance for
 `scan` and `infer` candidate triage; it does not silently replace
 `ask`'s witnessed-path evidence analysis.
 
+## Ownership attribution during enumeration
+
+Every `enum` run now records the ownership the evidence supports without a
+question or a model. The engine's AI-Attribution plugin watches the
+session's in-scope organizations and, as registration contacts, names,
+addresses and certificates arrive, finds assets whose owner is not
+documented. When the evidence is strong (shared registrant details, or
+registrant details plus hosting or a shared certificate), it writes the
+missing relationship, using only relationships OAM defines, tagged with
+the `amass-ai` source and a confidence. The assets that brings in join the
+enumeration's scope, the same way Horizontals widens it. Weaker proposals
+wait in the review journal, `data/ai/ai-review.jsonl`.
+
+```bash
+# Proposals and what was written automatically, with their evidence
+docker compose run --rm ai proposals
+
+# Review a proposal, or undo one written automatically
+docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you approve
+docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you reject
+docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you retract
+```
+
+A rejected or retracted proposal is never written again. Set
+`AMASS_AI_ATTRIBUTION=journal` in `.env` to have the engine write nothing
+and journal every proposal for review, or `off` to disable attribution,
+then recreate the engine with `docker compose up -d engine`. Details are in
+[Ownership gaps](https://github.com/owasp-amass/amass/blob/feature/ai-investigation-inference/docs/ai/OWNERSHIP_GAPS.md).
+
 ## Configuration
 
 Settings live in the local `.env`, optional `ai:` settings inside
