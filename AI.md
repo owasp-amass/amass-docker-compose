@@ -183,6 +183,14 @@ docker compose run --rm ai proposals
 docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you approve
 docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you reject
 docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you retract
+
+# Ask the model for a cited recommendation on each waiting proposal;
+# advice is shown by "proposals" and never decides anything itself
+docker compose run --rm ai review
+
+# After reviewing 40 or more proposals, learn the weights from your decisions;
+# the engine uses data/ai/attribution-model.json from the next enumeration
+docker compose run --rm ai train-attribution
 ```
 
 A rejected or retracted proposal is never written again. Set
