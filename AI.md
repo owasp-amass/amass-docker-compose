@@ -116,6 +116,16 @@ docker compose run --rm ai \
   -question "Which organizations are connected to owasp.org?" \
   -format mermaid ask
 
+# Vendors and controlled assets, answered from the relationship semantics
+docker compose run --rm ai \
+  -question "Which third-party vendors are used by owasp.org?" -format text ask
+docker compose run --rm ai \
+  -question "Which netblocks does the OWASP Foundation organization have?" -format text ask
+
+# Run the question evaluation set (every reported question) against your
+# model and Asset Database; prints pass/fail per case
+docker compose run --rm ai eval
+
 # Read-only indexed graph search; no LLM needed
 docker compose run --rm ai \
   -subject-type FQDN -subject-field name -subject-value owasp.org \
