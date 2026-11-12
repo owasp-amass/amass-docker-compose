@@ -62,6 +62,36 @@ services:
       provider-health: {condition: service_healthy}
     entrypoint: ["/bin/amass", "ai", "-config", "/.config/amass/config.yaml"]
 
+  # Read-only views of the Asset Database (no language model). Uses the image
+  # the ai service builds. Use: docker compose run --rm lens family -d example.com
+  lens:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_AI_JOURNAL: /data/ai-review.jsonl
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
+    depends_on:
+      assetdb: {condition: service_healthy}
+    entrypoint: ["/bin/amass", "lens", "-config", "/.config/amass/config.yaml"]
+
+  # The review journal: proposals, approve, reject, retract (no language model).
+  # Use: docker compose run --rm review proposals
+  review:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_AI_JOURNAL: /data/ai-review.jsonl
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/ai:/data:rw
+    depends_on:
+      assetdb: {condition: service_healthy}
+    entrypoint: ["/bin/amass", "review", "-config", "/.config/amass/config.yaml"]
+
   # Always-on classifier, fully independent of Ollama/Anthropic/etc.
   classifier:
     <<: *ai-image

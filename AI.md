@@ -177,12 +177,12 @@ wait in the review journal, `data/ai/ai-review.jsonl`.
 
 ```bash
 # Proposals and what was written automatically, with their evidence
-docker compose run --rm ai proposals
+docker compose run --rm review proposals
 
 # Review a proposal, or undo one written automatically
-docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you approve
-docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you reject
-docker compose run --rm ai -proposal own-1a2b3c4d5e6f7a8b -reviewer you retract
+docker compose run --rm review approve -proposal own-1a2b3c4d5e6f7a8b -reviewer you
+docker compose run --rm review reject -proposal own-1a2b3c4d5e6f7a8b -reviewer you
+docker compose run --rm review retract -proposal own-1a2b3c4d5e6f7a8b -reviewer you
 
 # Ask the model for a cited recommendation on each waiting proposal;
 # advice is shown by "proposals" and never decides anything itself
@@ -198,6 +198,40 @@ A rejected or retracted proposal is never written again. Set
 and journal every proposal for review, or `off` to disable attribution,
 then recreate the engine with `docker compose up -d engine`. Details are in
 [Ownership gaps](https://github.com/owasp-amass/amass/blob/feature/ai-investigation-inference/docs/ai/OWNERSHIP_GAPS.md).
+
+## Lenses: organization families, duplicates and identities
+
+The `lens` and `review` services run `amass lens` and `amass review` with the
+same image and journal. Lenses answer from the stored evidence without a
+language model and write nothing to the Asset Database; what they find that
+should change it becomes a proposal for `review`.
+
+```bash
+# The organizations behind a domain: the same institution under other names,
+# departments and affiliates, with the networks and other domains serving it
+docker compose run --rm lens family -d jhu.edu
+
+# Organizations stored more than once, and legal identities that contradict
+# their organization's evidence; both are recorded as proposals
+docker compose run --rm lens duplicates
+docker compose run --rm lens identity
+
+# Approve a merge or a correction; retract undoes either
+docker compose run --rm review approve -proposal dup-1a2b3c4d5e6f7a8b -reviewer you
+docker compose run --rm review retract -proposal dup-1a2b3c4d5e6f7a8b -reviewer you
+
+# Why each signal counts
+docker compose run --rm review signals
+docker compose run --rm review duplicate-signals
+```
+
+When enumerations finish, the engine records duplicate organizations and
+contradicted identities in the journal, and with `AMASS_AI_ATTRIBUTION=auto`
+merges the proposed duplicates once no enumeration is still running.
+Identity corrections always wait for a person. Details are in
+[Lenses and review](https://github.com/owasp-amass/amass/blob/feature/ai-investigation-inference/docs/LENSES.md).
+The older `docker compose run --rm ai proposals` style still works and
+prints the new command.
 
 ## Configuration
 
