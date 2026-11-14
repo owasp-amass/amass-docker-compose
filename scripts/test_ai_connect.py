@@ -182,6 +182,26 @@ class ConnectTest(unittest.TestCase):
         self.connect("cursor")
         self.assertTrue(ac.configured(ac.BY_ID["cursor"], ep))
 
+    def test_operator_mode(self):
+        ai = Path(self.tmp.name) / "repo"
+        (ai / "data" / "ai").mkdir(parents=True)
+        (ai / "data" / "ai" / ".mcp-token").write_text("r" * 48 + "\n")
+        (ai / "data" / "ai" / ".mcp-operator-token").write_text("o" * 48 + "\n")
+        with mock.patch.object(ac, "REPO", ai), mock.patch.object(ac, "find_container", lambda d, n: "c1"):
+            reader, operator = ac.build_endpoint("amass"), ac.build_endpoint("amass", True)
+        self.assertEqual(reader.token, "r" * 48)
+        self.assertEqual(operator.token, "o" * 48)
+        self.assertNotIn("-operator", reader.stdio()[1])
+        args = operator.stdio()[1]
+        self.assertEqual(args[-1], "-operator")
+        self.assertIn("AMASS_AI_MCP_RUN_JOURNAL=/data/enumerations-stdio.jsonl", args)
+
+        path = self.home / ".cursor" / "mcp.json"
+        path.parent.mkdir()
+        ac.apply(ac.BY_ID["cursor"], operator, False, False, False)
+        self.assertEqual(json.loads(path.read_text())["mcpServers"]["amass"]["headers"]["Authorization"],
+                         "Bearer " + "o" * 48)
+
     def test_strip_jsonc_keeps_strings(self):
         text, lossy = ac.strip_jsonc('{"a": "http://x//y", /* c */ "b": [1,],}')
         self.assertTrue(lossy)

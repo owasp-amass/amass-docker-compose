@@ -39,8 +39,11 @@ port `18090`, and separate data directories. Do not reuse production
 database volumes or assume the default-branch published images are in use.
 
 To use Amass from the AI assistant you already have (Claude, Cursor, VS
-Code, Codex, Gemini CLI and others), run `bash scripts/ai-connect.sh` after
-the stack is up.
+Code, Codex, Gemini CLI and others), run `bash scripts/ai-connect.sh
+--operator` after the stack is up: the assistant can then start
+enumerations (each one approved by you), answer questions, draw graphs,
+review proposals and help add data source keys. Without an assistant,
+`AMASS_AI_CHAT=true bash scripts/ai-up.sh` adds a local chat UI.
 
 See [AI.md](AI.md) for provider settings, classifier training, connecting
 assistants over MCP and test-stack checks.

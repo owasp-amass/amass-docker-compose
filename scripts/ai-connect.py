@@ -53,12 +53,17 @@ class Endpoint:
     docker: str
     container: str
     network: str
+    operator: bool = False
 
     def headers(self) -> dict:
         return {"Authorization": "Bearer " + self.token}
 
     def stdio(self) -> tuple[str, list]:
-        return self.docker, ["exec", "-i", self.container, *STDIO_BINARY]
+        if not self.operator:
+            return self.docker, ["exec", "-i", self.container, *STDIO_BINARY]
+        # A stdio operator keeps its own run journal, apart from the HTTP server's.
+        return self.docker, ["exec", "-i", "-e", "AMASS_AI_MCP_RUN_JOURNAL=/data/enumerations-stdio.jsonl",
+                             self.container, *STDIO_BINARY, "-operator"]
 
 
 def env_value(key: str, default: str = "") -> str:
@@ -74,9 +79,11 @@ def env_value(key: str, default: str = "") -> str:
     return default
 
 
-def read_token() -> str:
-    token = os.environ.get("AMASS_AI_MCP_TOKEN", "")
-    path = REPO / "data" / "ai" / ".mcp-token"
+def read_token(operator: bool = False) -> str:
+    env, name = ("AMASS_AI_MCP_OPERATOR_TOKEN", ".mcp-operator-token") if operator else (
+        "AMASS_AI_MCP_TOKEN", ".mcp-token")
+    token = os.environ.get(env, "")
+    path = REPO / "data" / "ai" / name
     if not token and path.exists():
         token = path.read_text().strip()
     return token
@@ -99,14 +106,15 @@ def find_container(docker: str, namespace: str) -> str:
     return f"{namespace}-ai-mcp-1"
 
 
-def build_endpoint(name: str) -> Endpoint:
+def build_endpoint(name: str, operator: bool = False) -> Endpoint:
     namespace = env_value("AMASS_TEST_NAMESPACE", DEFAULT_NAMESPACE)
     port = env_value("AMASS_AI_MCP_PORT", DEFAULT_PORT)
     # GUI clients start commands with a short PATH, so the bridge names
     # Docker by its absolute path.
     docker = shutil.which("docker") or ""
-    return Endpoint(name=name, url=f"http://127.0.0.1:{port}/mcp", token=read_token(), docker=docker or "docker",
-                    container=find_container(docker, namespace), network=f"{namespace}-net")
+    return Endpoint(name=name, url=f"http://127.0.0.1:{port}/mcp", token=read_token(operator),
+                    docker=docker or "docker", container=find_container(docker, namespace),
+                    network=f"{namespace}-net", operator=operator)
 
 
 # ---------------------------------------------------------------------------
@@ -344,8 +352,10 @@ def jetbrains_text(ep: Endpoint) -> str:
 
 
 def open_webui_text(ep: Endpoint) -> str:
-    return ("Open WebUI (v0.6.31 or later): Admin Settings > Integrations > External Tool Servers > "
-            "Add Connection.\n"
+    return ("The stack can run Open WebUI for you, already connected in operator mode:\n"
+            "  AMASS_AI_CHAT=true bash scripts/ai-up.sh   (then open http://127.0.0.1:18080)\n"
+            "To connect an Open WebUI you run yourself (v0.6.31 or later): Admin Settings > Integrations > "
+            "External Tool Servers > Add Connection.\n"
             "  Type: MCP (Streamable HTTP)\n"
             f"  URL:  {ep.url}  (Open WebUI running on this computer outside Docker)\n"
             f"        http://ai-mcp:{CONTAINER_PORT}/mcp  (Open WebUI in Docker: first run\n"
@@ -628,8 +638,19 @@ def check_http(ep: Endpoint) -> str:
             headers["Mcp-Session-Id"] = session
         req = urllib.request.Request(ep.url, data=json.dumps(payload).encode(), method="POST", headers=headers)
         with urllib.request.urlopen(req, timeout=20) as resp:
-            body = resp.read()
-            return resp.headers.get("Mcp-Session-Id", ""), (json.loads(body) if body else {})
+            body = resp.read().decode()
+            session_id = resp.headers.get("Mcp-Session-Id", "")
+            if not body.strip():
+                return session_id, {}
+            if "text/event-stream" in resp.headers.get("Content-Type", ""):
+                # Operator sessions answer with event streams: take the reply.
+                for line in body.splitlines():
+                    if line.startswith("data:"):
+                        msg = json.loads(line[5:].strip())
+                        if "result" in msg or "error" in msg:
+                            return session_id, msg
+                return session_id, {}
+            return session_id, json.loads(body)
 
     session, init = call({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
         "protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "ai-connect", "version": "1"}}})
@@ -644,10 +665,15 @@ def check_http(ep: Endpoint) -> str:
         urllib.request.urlopen(req, timeout=10).close()
     except urllib.error.URLError:
         pass
-    n_tools = len(tools.get("result", {}).get("tools", []))
+    names = {t.get("name") for t in tools.get("result", {}).get("tools", [])}
+    n_tools = len(names)
     n_prompts = len(prompts.get("result", {}).get("prompts", []))
     version = init["result"].get("protocolVersion", "?")
-    return f"HTTP OK: protocol {version}, {n_tools} tools, {n_prompts} prompts"
+    mode = "operator" if "start_enumeration" in names else "read-only"
+    if ep.operator and mode != "operator":
+        raise ConfigError("the server did not offer the operator tools; is AMASS_AI_MCP_OPERATOR_TOKEN set "
+                          "for ai-mcp (bash scripts/ai-up.sh sets it)?")
+    return f"HTTP OK ({mode}): protocol {version}, {n_tools} tools, {n_prompts} prompts"
 
 
 def check_stdio(ep: Endpoint) -> str:
@@ -728,16 +754,21 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--check", action="store_true", help="check the MCP endpoint and stdio bridge, then exit")
     p.add_argument("--dry-run", action="store_true", help="show what would change without writing")
     p.add_argument("--force", action="store_true", help="rewrite JSON files that contain comments (backed up)")
+    p.add_argument("--operator", action="store_true",
+                   help="connect in operator mode: the assistant may also start enumerations (each approved by "
+                        "you), review proposals and add data source keys")
     p.add_argument("--name", default="amass", help="server name to register (default: amass)")
     p.add_argument("--no-check", action="store_true", help="skip the endpoint check after connecting")
     args = p.parse_args(argv)
 
-    ep = build_endpoint(args.name)
+    ep = build_endpoint(args.name, args.operator)
     if not re.fullmatch(r"[A-Za-z0-9_-]+", args.name):
         p.error("--name may contain only letters, digits, '-' and '_'")
     if not args.remove and len(ep.token) < 32 and not args.list:
-        print("ERROR: no MCP token found. Start the stack with: bash scripts/ai-up.sh "
-              "(it creates data/ai/.mcp-token), or export AMASS_AI_MCP_TOKEN.", file=sys.stderr)
+        which = ("data/ai/.mcp-operator-token", "AMASS_AI_MCP_OPERATOR_TOKEN") if args.operator else (
+            "data/ai/.mcp-token", "AMASS_AI_MCP_TOKEN")
+        print(f"ERROR: no MCP token found. Start the stack with: bash scripts/ai-up.sh "
+              f"(it creates {which[0]}), or export {which[1]}.", file=sys.stderr)
         return 1
 
     if args.check:

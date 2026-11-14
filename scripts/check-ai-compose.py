@@ -14,7 +14,8 @@ def main():
     cmd = ["docker", "compose"]
     for path in FILES:
         cmd += ["-f", path]
-    cmd += ["--profile", "ai-stdio", "--profile", "ai-local", "--profile", "ai-train", "config", "--format", "json"]
+    cmd += ["--profile", "ai-stdio", "--profile", "ai-local", "--profile", "ai-train", "--profile", "ai-chat",
+            "config", "--format", "json"]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except FileNotFoundError:
@@ -24,7 +25,7 @@ def main():
     # The combined-profile config can be valid while a real command fails:
     # e.g., `--profile ai-tools build ai` if its dependencies are confined
     # to an inactive profile. Validate each exact startup profile separately.
-    for selected_profile in ("ai-train", "ai-local", "ai-stdio"):
+    for selected_profile in ("ai-train", "ai-local", "ai-stdio", "ai-chat"):
         profile_cmd = ["docker", "compose"]
         for name in FILES:
             profile_cmd += ["-f", name]
@@ -39,7 +40,7 @@ def main():
     services = configuration.get("services", {})
     required = {"enum", "subs", "assoc", "track", "viz", "engine", "assetdb",
                 "postal", "syslog", "ai", "lens", "review", "ai-mcp", "ai-mcp-stdio",
-                "classifier", "classifier-train", "provider-health", "ollama", "ollama-pull"}
+                "classifier", "classifier-train", "provider-health", "ollama", "ollama-pull", "open-webui"}
     assert not (required - set(services)), "Missing services: " + repr(sorted(required - set(services)))
     project = configuration.get("name", "")
     assert project and project != "amass", "Test project name collides with existing environment"
@@ -87,7 +88,17 @@ def main():
     for name in ("classifier", "provider-health", "ollama"):
         assert name not in dependencies, f"read-only MCP must not wait for {name}"
 
-    for name in ("ollama", "ollama-pull"):
+    chat = services["open-webui"]
+    assert "ai-chat" in chat.get("profiles", []), "The chat UI must be an opt-in profile"
+    assert all(p.get("host_ip") == "127.0.0.1" for p in chat.get("ports", [])), "Chat UI must only publish to loopback"
+    env = services["ai-mcp"].get("environment", {})
+    for key in ("AMASS_AI_MCP_OPERATOR_TOKEN", "AMASS_AI_MCP_PUBLIC_URL", "AMASS_AI_MCP_RUN_JOURNAL", "AMASS_AI_JOURNAL"):
+        assert key in env, f"ai-mcp lacks {key}"
+    writable = [v for v in services["ai-mcp"].get("volumes", []) if not v.get("read_only")]
+    assert {v.get("target") for v in writable} <= {"/data", "/.config/amass/datasources.yaml"}, (
+        "ai-mcp may write only its data directory and the datasources file")
+
+    for name in ("ollama", "ollama-pull", "open-webui"):
         image = services[name]["image"]
         assert not image.endswith(":latest") and ":" in image, f"{name} image must be pinned: {image}"
 
@@ -98,6 +109,7 @@ def main():
     print("PASS: one Compose file; ai is an unprofiled first-class Amass subcommand")
     print("PASS: classifier and model checker are provider-independent services")
     print("PASS: stdio MCP preserved, persistent HTTP MCP declared as normal service")
+    print("PASS: operator MCP settings present; chat UI is opt-in and loopback-only")
     print("No containers started and no external targets scanned.")
 
 if __name__ == "__main__":

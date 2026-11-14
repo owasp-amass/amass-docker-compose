@@ -140,15 +140,28 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # Persistent, authenticated read-only Streamable HTTP MCP server.
+  # Persistent, authenticated Streamable HTTP MCP server. The read-only token
+  # reads the Asset Database; the operator token also starts enumerations
+  # (each approved by the user), reviews proposals and stores data source
+  # keys entered on one-time local pages.
   ai-mcp:
     <<: *ai-image
     env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
       AMASS_AI_MCP_TOKEN: ${AMASS_AI_MCP_TOKEN:-}
+      AMASS_AI_MCP_OPERATOR_TOKEN: ${AMASS_AI_MCP_OPERATOR_TOKEN:-}
+      # How the user's browser reaches this server, for drawing, approval and
+      # key links.
+      AMASS_AI_MCP_PUBLIC_URL: http://127.0.0.1:${AMASS_AI_MCP_PORT:-18090}
+      AMASS_AI_MCP_RUN_JOURNAL: /data/enumerations.jsonl
+      AMASS_AI_MCP_REQUIRE_CONFIRMATION: ${AMASS_AI_MCP_REQUIRE_CONFIRMATION:-false}
+      # The review journal the engine's automatic attribution writes.
+      AMASS_AI_JOURNAL: /data/ai-review.jsonl
     volumes:
       - ./config:/.config/amass:ro
+      # Writable only for data source keys entered on the key pages.
+      - ./config/datasources.yaml:/.config/amass/datasources.yaml:rw
       - ./data/ai:/data:rw
     ports:
       - "127.0.0.1:${AMASS_AI_MCP_PORT:-18090}:8090"
@@ -179,6 +192,38 @@ services:
     stdin_open: true
     tty: false
     entrypoint: ["/bin/amass-ai-mcp", "-config", "/.config/amass/config.yaml"]
+
+  # Optional chat UI (profile ai-chat): Open WebUI on the stack's Ollama
+  # model, with the Amass MCP server connected in operator mode. Start it
+  # with: AMASS_AI_CHAT=true bash scripts/ai-up.sh
+  open-webui:
+    profiles: [ai-chat]
+    image: ${AMASS_AI_CHAT_IMAGE:-ghcr.io/open-webui/open-webui:v0.9.5}
+    networks: [amass]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      OLLAMA_BASE_URL: ${AMASS_AI_CHAT_OLLAMA_URL:-http://ollama:11434}
+      # Single-user local install: no login page. Set to true before the
+      # first start to require accounts.
+      WEBUI_AUTH: ${AMASS_AI_CHAT_AUTH:-false}
+      WEBUI_SECRET_KEY: ${AMASS_AI_CHAT_SECRET:-}
+      ENABLE_OPENAI_API: "false"
+      # Seeds the Amass MCP connection on first start; later changes are made
+      # in Admin Settings > Integrations (or by removing data/open-webui).
+      TOOL_SERVER_CONNECTIONS: >-
+        [{"type":"mcp","url":"http://ai-mcp:8090/mcp","path":"","auth_type":"bearer",
+        "key":"${AMASS_AI_MCP_OPERATOR_TOKEN:-}","config":{"enable":true},
+        "info":{"id":"amass","name":"Amass","description":"OWASP Amass attack surface data and enumerations"}}]
+      ANONYMIZED_TELEMETRY: "false"
+      DO_NOT_TRACK: "true"
+      SCARF_NO_ANALYTICS: "true"
+    volumes:
+      - ./data/open-webui:/app/backend/data:rw
+    ports:
+      - "127.0.0.1:${AMASS_AI_CHAT_PORT:-18080}:8080"
+    depends_on:
+      ai-mcp: {condition: service_healthy}
+    restart: unless-stopped
 
   # Auto-selected by scripts/ai-up.sh for the local Ollama provider.
   ollama:

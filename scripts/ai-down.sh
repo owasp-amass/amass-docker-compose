@@ -3,11 +3,12 @@
 # Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
 # SPDX-License-Identifier: Apache-2.0
 
-# Stop the disposable AI test deployment, including optional-profile Ollama.
+# Stop the disposable AI test deployment, including optional-profile Ollama
+# and the chat UI.
 # Does not remove bind-mounted database/model data or named volumes.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-docker compose --profile ai-local --profile ai-train --profile ai-stdio down
+docker compose --profile ai-local --profile ai-train --profile ai-stdio --profile ai-chat down
 # Resolve the network name using Compose interpolation (including .env).
 network="$(docker compose config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["networks"]["amass"]["name"])')"
 # Compose only removes an otherwise unused network. If another container

@@ -32,6 +32,19 @@ if (( ${#AMASS_AI_MCP_TOKEN} < 32 )); then
   echo "ERROR: MCP token must be at least 32 characters" >&2
   exit 1
 fi
+# The operator token unlocks the MCP tools that act (enumerations, reviews,
+# data source keys); each action is still approved by the user.
+if [[ -z "${AMASS_AI_MCP_OPERATOR_TOKEN:-}" ]]; then
+  token_file=data/ai/.mcp-operator-token
+  if [[ ! -s "$token_file" ]]; then
+    (umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > "$token_file")
+  fi
+  export AMASS_AI_MCP_OPERATOR_TOKEN="$(cat "$token_file")"
+fi
+if (( ${#AMASS_AI_MCP_OPERATOR_TOKEN} < 32 )) || [[ "$AMASS_AI_MCP_OPERATOR_TOKEN" == "$AMASS_AI_MCP_TOKEN" ]]; then
+  echo "ERROR: the MCP operator token must be at least 32 characters and differ from the MCP token" >&2
+  exit 1
+fi
 
 # Respect existing Compose .env and exported model settings without evaluating
 # shell from .env. Only the exact internal Ollama hostname is auto-provisioned.
@@ -44,6 +57,18 @@ if not value and Path(".env").exists():
         if line.strip().startswith("AMASS_AI_ENDPOINT="):
             value=line.split("=",1)[1].strip().strip('"').strip("'")
 print(value or "http://ollama:11434")
+PY
+)"
+# AMASS_AI_CHAT=true also starts the optional Open WebUI chat profile.
+chat="$(python3 - <<'PY'
+import os
+from pathlib import Path
+value=os.environ.get("AMASS_AI_CHAT","")
+if not value and Path(".env").exists():
+    for line in Path(".env").read_text().splitlines():
+        if line.strip().startswith("AMASS_AI_CHAT="):
+            value=line.split("=",1)[1].strip().strip('"').strip("'")
+print("true" if value.lower() in ("1","true","yes") else "false")
 PY
 )"
 provider="$(python3 - <<'PY'
@@ -191,10 +216,37 @@ echo "Starting Amass, classifier, provider health checker and MCP..."
 "${compose[@]}" up -d --build --wait --wait-timeout 900 \
   assetdb syslog postal engine classifier provider-health ai-mcp
 
+if [[ "$chat" == true ]]; then
+  if [[ -z "${AMASS_AI_CHAT_SECRET:-}" ]]; then
+    secret_file=data/ai/.chat-secret
+    if [[ ! -s "$secret_file" ]]; then
+      (umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > "$secret_file")
+    fi
+    export AMASS_AI_CHAT_SECRET="$(cat "$secret_file")"
+  fi
+  if [[ -z "${AMASS_AI_CHAT_OLLAMA_URL:-}" ]]; then
+    if (( host_model == 1 )); then
+      export AMASS_AI_CHAT_OLLAMA_URL=http://host.docker.internal:11434
+    elif (( local_model == 1 )); then
+      export AMASS_AI_CHAT_OLLAMA_URL=http://ollama:11434
+    else
+      echo "WARNING: the chat UI talks to Ollama, but this stack uses an external provider ($provider)." >&2
+      echo "         Set AMASS_AI_CHAT_OLLAMA_URL, or add a provider connection in Open WebUI's settings." >&2
+    fi
+  fi
+  mkdir -p data/open-webui
+  echo "Starting the Open WebUI chat profile connected to Amass..."
+  "${compose[@]}" --profile ai-chat up -d --wait --wait-timeout 600 open-webui
+fi
+
 echo "AI profile is healthy; model inference connectivity was verified."
 "${compose[@]}" ps
 echo "MCP URL: http://127.0.0.1:${AMASS_AI_MCP_PORT:-18090}/mcp"
 echo "MCP bearer token: data/ai/.mcp-token (unless provided by environment)"
-echo "Connect an AI assistant (Claude, Cursor, VS Code, Codex, Gemini CLI, ...): bash scripts/ai-connect.sh"
+echo "MCP operator token: data/ai/.mcp-operator-token (starts enumerations after your approval)"
+echo "Connect an AI assistant (Claude, Cursor, VS Code, Codex, Gemini CLI, ...): bash scripts/ai-connect.sh --operator"
+if [[ "$chat" == true ]]; then
+  echo "Chat with Amass in your browser: http://127.0.0.1:${AMASS_AI_CHAT_PORT:-18080}"
+fi
 echo "Classifier state can be inspected with: ${compose[*]} exec -T classifier wget -qO- http://127.0.0.1:8092/v1/model"
 echo "No Internet enumeration or inference-derived graph write was started."

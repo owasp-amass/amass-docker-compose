@@ -335,7 +335,8 @@ After `bash scripts/ai-up.sh`, connect the assistant or agent you already
 use:
 
 ```bash
-bash scripts/ai-connect.sh            # list detected assistants and offer to connect them
+bash scripts/ai-connect.sh --operator # connect detected assistants; they may also act (see below)
+bash scripts/ai-connect.sh            # list detected assistants and offer to connect them read-only
 bash scripts/ai-connect.sh cursor     # connect one (or several) by name
 bash scripts/ai-connect.sh --list     # which are detected and connected
 bash scripts/ai-connect.sh --check    # test the MCP endpoint and the stdio bridge
@@ -364,7 +365,8 @@ lens (`amass_exposure`, `amass_email`, `amass_attack_surface_overview`,
 | LM Studio | `lm-studio` | HTTP, `~/.lmstudio/mcp.json` |
 | opencode | `opencode` | HTTP, `opencode.json` |
 | Kiro (IDE and CLI) | `kiro` | HTTP, `~/.kiro/settings/mcp.json` |
-| goose, Continue, JetBrains AI Assistant, Open WebUI | `goose`, `continue`, `jetbrains`, `open-webui` | printed instructions to paste |
+| goose, Continue, JetBrains AI Assistant | `goose`, `continue`, `jetbrains` | printed instructions to paste |
+| Open WebUI | `open-webui` | bundled: `AMASS_AI_CHAT=true bash scripts/ai-up.sh`; or instructions for your own |
 | Anything else that speaks MCP | `generic` | prints the URL, header and stdio command |
 
 How it works:
@@ -390,8 +392,58 @@ How it works:
   on a public HTTPS address with OAuth, so they cannot reach this local
   endpoint; run `bash scripts/ai-connect.sh web` for the details.
 
-The MCP tools are bounded and **read-only**: an assistant can read the
-Asset Database but cannot change it or start an enumeration. Investigation
+### Work entirely through the assistant (operator mode)
+
+Connected with `--operator`, an assistant can run the whole workflow:
+
+- **Collect.** Ask "enumerate example.com" or "what's new on example.com?";
+  it plans the enumeration (`plan_enumeration`), shows you the exact scope
+  and what it will do, and starts it (`start_enumeration`) only after you
+  approve. Passive is the default; active collection (brute forcing, zone
+  transfers, probing hosts) is a separate, clearly marked approval. It can
+  follow progress, stop a run, and tell you what a finished run found.
+- **Ask.** Every lens and investigation, as above.
+- **See.** "Draw what example.com controls" returns a diagram in the chat
+  and a link to an interactive graph (and a Gephi file).
+- **Review.** It lists ownership, merge and identity proposals and approves,
+  rejects or retracts them; anything that writes asks you first.
+- **Configure.** It tells you which data sources lack API keys and gives
+  you a one-time local link where you paste a key. Keys go from your
+  browser to `config/datasources.yaml`, never through the assistant.
+
+How you approve: assistants that support MCP approval dialogs (elicitation)
+ask in their own window. Others give you a one-time link to
+`http://127.0.0.1:18090/approve/...` showing the action, which happens
+only when you press Approve. Nothing is collected or written before that.
+Set `AMASS_AI_MCP_REQUIRE_CONFIRMATION=true` in `.env` to refuse actions
+from clients that offer neither (stdio clients otherwise rely on their own
+tool-approval prompt).
+
+The operator token is `data/ai/.mcp-operator-token`; `bash scripts/ai-up.sh`
+creates it. Runs are recorded in `data/ai/enumerations.jsonl`, at most two
+run at once, and each stops after its work settles, 30 minutes without
+progress, or 24 hours.
+
+### Chat in the browser (Open WebUI)
+
+No assistant installed? Start the optional chat profile:
+
+```bash
+AMASS_AI_CHAT=true bash scripts/ai-up.sh
+```
+
+Then open `http://127.0.0.1:18080`. Open WebUI runs on the stack's Ollama
+model (or the Ollama on your computer when configured) with Amass
+connected in operator mode; turn on the Amass tools for a chat from the
+chat's tools menu. It is a single-user local install without a login;
+set `AMASS_AI_CHAT_AUTH=true` before the first start to require accounts.
+Data lives in `data/open-webui`. Open WebUI reads the Amass connection
+from the environment on its first start; if you rotate the operator token,
+update it in Admin Settings > Integrations. Small local models call tools
+less reliably than large hosted ones; `qwen3:8b` or larger is recommended.
+
+Read-only connections (without `--operator`) can read the Asset Database
+but cannot change it or start an enumeration. Investigation
 answers that need a model (`paths`) use the model configured for this
 stack; every other answer is computed without one, so the assistant's own
 model does the reasoning. The original stdio service also remains
