@@ -231,6 +231,19 @@ docker compose run --rm lens dangling -d jhu.edu
 # What appeared since a date, and what later enumerations stopped seeing
 docker compose run --rm lens changes -d jhu.edu -since 2026-11-01
 
+# Posture: certificates, domain registrations, mail security, what is
+# exposed, reliance on single providers, data gaps and geography
+docker compose run --rm lens certificates -d jhu.edu
+docker compose run --rm lens domains -d jhu.edu
+docker compose run --rm lens email -d jhu.edu
+docker compose run --rm lens exposure -d jhu.edu
+docker compose run --rm lens concentration -d jhu.edu
+docker compose run --rm lens coverage -d jhu.edu
+docker compose run --rm lens geography -d jhu.edu
+
+# What two organizations share: assets and outside parties
+docker compose run --rm lens compare -d jhu.edu -with jhmi.edu
+
 # An organization's corporate group (parent, subsidiaries and units), and
 # the vendors used across the whole group
 docker compose run --rm lens org-group -d spotify.com
