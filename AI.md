@@ -228,6 +228,9 @@ docker compose run --rm lens network -d jhu.edu
 # subdomain takeovers, lapsed domains and stale addresses (leads to verify)
 docker compose run --rm lens dangling -d jhu.edu
 
+# What appeared since a date, and what later enumerations stopped seeing
+docker compose run --rm lens changes -d jhu.edu -since 2026-11-01
+
 # An organization's corporate group (parent, subsidiaries and units), and
 # the vendors used across the whole group
 docker compose run --rm lens org-group -d spotify.com
