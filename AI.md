@@ -216,6 +216,10 @@ docker compose run --rm lens family -d jhu.edu
 # TXT records and mail senders authorized by SPF
 docker compose run --rm lens vendors -d jhu.edu
 
+# The services stored for what a domain controls: ports, software,
+# certificates, and unusual ports or expired certificates first
+docker compose run --rm lens services -d jhu.edu
+
 # An organization's corporate group (parent, subsidiaries and units), and
 # the vendors used across the whole group
 docker compose run --rm lens org-group -d spotify.com
