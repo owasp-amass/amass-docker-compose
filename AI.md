@@ -21,6 +21,7 @@ git merge --ff-only origin/feature/ai-investigation-inference
 
 bash scripts/ai-up.sh
 python3 scripts/ai-doctor.py
+bash scripts/ai-connect.sh   # optional: connect your AI assistant (see below)
 ```
 
 That's the entire setup. The startup script:
@@ -328,23 +329,73 @@ the model, `bash scripts/ai-up.sh` retrains and loads the model
 automatically. Trained scores are **uncalibrated triage signals**, not
 ownership verification.
 
-## MCP
+## Connect an AI assistant
 
-The persistent authenticated MCP HTTP endpoint is:
+After `bash scripts/ai-up.sh`, connect the assistant or agent you already
+use:
 
-```text
-http://127.0.0.1:18090/mcp
+```bash
+bash scripts/ai-connect.sh            # list detected assistants and offer to connect them
+bash scripts/ai-connect.sh cursor     # connect one (or several) by name
+bash scripts/ai-connect.sh --list     # which are detected and connected
+bash scripts/ai-connect.sh --check    # test the MCP endpoint and the stdio bridge
+bash scripts/ai-connect.sh --remove claude-desktop
 ```
 
-Use a Streamable HTTP MCP client with:
+On Windows without a Bash shell, run `python scripts\ai-connect.py` with the
+same arguments. Then restart or reload the assistant and ask, for example, "Using Amass,
+what does example.com expose?". The server tells the assistant how to use
+its tools, and assistants that show MCP prompts as commands list one per
+lens (`amass_exposure`, `amass_email`, `amass_attack_surface_overview`,
+...), each taking a domain or an organization's name.
 
-```text
-Authorization: Bearer <contents of data/ai/.mcp-token>
-```
+| Client | `ai-connect.sh` name | How it connects |
+| --- | --- | --- |
+| Claude Code | `claude-code` | HTTP, through `claude mcp add` (user scope) |
+| Claude Desktop | `claude-desktop` | stdio bridge (`docker exec` into `ai-mcp`) |
+| Cursor | `cursor` | HTTP, `~/.cursor/mcp.json` |
+| VS Code, GitHub Copilot agent mode (also Insiders, VSCodium) | `vscode` | HTTP, user `mcp.json` |
+| Windsurf | `windsurf` | HTTP, `mcp_config.json` |
+| Gemini CLI | `gemini-cli` | HTTP, `~/.gemini/settings.json` |
+| OpenAI Codex CLI and IDE extension | `codex` | HTTP, `~/.codex/config.toml` |
+| GitHub Copilot CLI | `copilot-cli` | HTTP, `~/.copilot/mcp-config.json` |
+| Cline (CLI and VS Code) | `cline` | HTTP, `cline_mcp_settings.json` |
+| Zed | `zed` | HTTP, `context_servers` in settings |
+| LM Studio | `lm-studio` | HTTP, `~/.lmstudio/mcp.json` |
+| opencode | `opencode` | HTTP, `opencode.json` |
+| Kiro (IDE and CLI) | `kiro` | HTTP, `~/.kiro/settings/mcp.json` |
+| goose, Continue, JetBrains AI Assistant, Open WebUI | `goose`, `continue`, `jetbrains`, `open-webui` | printed instructions to paste |
+| Anything else that speaks MCP | `generic` | prints the URL, header and stdio command |
 
-The MCP implementation exposes bounded **read-only** OAM tools.
-The original stdio MCP mode remains available as `ai-mcp-stdio`
-behind the `ai-stdio` profile.
+How it works:
+
+- Clients that speak Streamable HTTP use the endpoint published on
+  localhost, `http://127.0.0.1:18090/mcp`, with
+  `Authorization: Bearer <contents of data/ai/.mcp-token>`.
+- Clients that only start local commands get a stdio bridge,
+  `docker exec -i amass-ai-test-ai-mcp-1 /bin/amass-ai-mcp ...`, which runs
+  inside the already running `ai-mcp` container. Nothing is installed on
+  the host, and Docker is named by its absolute path because desktop apps
+  start commands with a short `PATH`.
+- Each file is backed up (`<file>.amass-backup-<time>`) before it changes;
+  other servers and settings are kept, and running the script again
+  updates the entry instead of adding a second one. A JSON file with
+  comments (Zed and VS Code settings often have them) keeps its comments
+  when the entry is new; changing an existing entry in such a file needs
+  `--force`.
+- The token is written into each client's configuration, because desktop
+  applications do not see shell variables. A new file is created readable
+  only by you. After rotating the token, run the script again.
+- Web assistants (Claude.ai, ChatGPT) connect only to remote MCP servers
+  on a public HTTPS address with OAuth, so they cannot reach this local
+  endpoint; run `bash scripts/ai-connect.sh web` for the details.
+
+The MCP tools are bounded and **read-only**: an assistant can read the
+Asset Database but cannot change it or start an enumeration. Investigation
+answers that need a model (`paths`) use the model configured for this
+stack; every other answer is computed without one, so the assistant's own
+model does the reasoning. The original stdio service also remains
+available as `ai-mcp-stdio` behind the `ai-stdio` profile.
 
 Check provider, classifier and MCP together without collecting data:
 

@@ -195,5 +195,6 @@ echo "AI profile is healthy; model inference connectivity was verified."
 "${compose[@]}" ps
 echo "MCP URL: http://127.0.0.1:${AMASS_AI_MCP_PORT:-18090}/mcp"
 echo "MCP bearer token: data/ai/.mcp-token (unless provided by environment)"
+echo "Connect an AI assistant (Claude, Cursor, VS Code, Codex, Gemini CLI, ...): bash scripts/ai-connect.sh"
 echo "Classifier state can be inspected with: ${compose[*]} exec -T classifier wget -qO- http://127.0.0.1:8092/v1/model"
 echo "No Internet enumeration or inference-derived graph write was started."

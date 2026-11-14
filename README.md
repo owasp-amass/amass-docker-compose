@@ -38,8 +38,12 @@ docker compose run --rm enum -h
 port `18090`, and separate data directories. Do not reuse production
 database volumes or assume the default-branch published images are in use.
 
-See [AI.md](AI.md) for provider settings, classifier training, MCP
-authentication and test-stack checks.
+To use Amass from the AI assistant you already have (Claude, Cursor, VS
+Code, Codex, Gemini CLI and others), run `bash scripts/ai-connect.sh` after
+the stack is up.
+
+See [AI.md](AI.md) for provider settings, classifier training, connecting
+assistants over MCP and test-stack checks.
 
 ## Docker Compose Setup Instructions
 
