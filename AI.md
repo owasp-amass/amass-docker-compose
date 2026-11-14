@@ -220,6 +220,10 @@ docker compose run --rm lens vendors -d jhu.edu
 # certificates, and unusual ports or expired certificates first
 docker compose run --rm lens services -d jhu.edu
 
+# The address space of what a domain controls: its netblocks and autonomous
+# systems, where its names are hosted, and registered space no name uses
+docker compose run --rm lens network -d jhu.edu
+
 # An organization's corporate group (parent, subsidiaries and units), and
 # the vendors used across the whole group
 docker compose run --rm lens org-group -d spotify.com
