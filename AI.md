@@ -199,7 +199,7 @@ and journal every proposal for review, or `off` to disable attribution,
 then recreate the engine with `docker compose up -d engine`. Details are in
 [Ownership gaps](https://github.com/owasp-amass/amass/blob/feature/ai-investigation-inference/docs/ai/OWNERSHIP_GAPS.md).
 
-## Lenses: organization families, duplicates and identities
+## Lenses: families, vendors, corporate groups, duplicates and identities
 
 The `lens` and `review` services run `amass lens` and `amass review` with the
 same image and journal. Lenses answer from the stored evidence without a
@@ -210,6 +210,19 @@ should change it becomes a proposal for `review`.
 # The organizations behind a domain: the same institution under other names,
 # departments and affiliates, with the networks and other domains serving it
 docker compose run --rm lens family -d jhu.edu
+
+# The outside parties a domain and its organization depend on: registrars,
+# DNS and hosting providers, certificate authorities, SaaS verified in DNS
+# TXT records and mail senders authorized by SPF
+docker compose run --rm lens vendors -d jhu.edu
+
+# An organization's corporate group (parent, subsidiaries and units), and
+# the vendors used across the whole group
+docker compose run --rm lens org-group -d spotify.com
+docker compose run --rm lens group-vendors -org "Spotify AB"
+
+# Large institutions can reach the per-run limits; raise them for one run
+docker compose run --rm lens vendors -d nasa.gov -max-assets 10000 -max-reads 100000 -investigation-timeout 20m
 
 # Organizations stored more than once, and legal identities that contradict
 # their organization's evidence; both are recorded as proposals
