@@ -224,6 +224,10 @@ docker compose run --rm lens services -d jhu.edu
 # systems, where its names are hosted, and registered space no name uses
 docker compose run --rm lens network -d jhu.edu
 
+# DNS records that may point at something it no longer holds: possible
+# subdomain takeovers, lapsed domains and stale addresses (leads to verify)
+docker compose run --rm lens dangling -d jhu.edu
+
 # An organization's corporate group (parent, subsidiaries and units), and
 # the vendors used across the whole group
 docker compose run --rm lens org-group -d spotify.com
