@@ -51,13 +51,15 @@ services:
       XDG_CONFIG_HOME: /data/.config
       # The review journal the engine's automatic attribution also uses.
       AMASS_AI_JOURNAL: /data/ai-review.jsonl
-      # The vulnerable lens's data (NVD and CISA KEV); ai-mcp refreshes it daily.
-      AMASS_VULN_DATA: /data/vulnerabilities.json
+      # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
+      # on the host; ai-mcp refreshes it daily.
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
       AMASS_AI_CLASSIFIER_ENDPOINT: http://classifier:8092
       AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
     volumes:
       - ./config:/.config/amass:ro
       - ./data/ai:/data:rw
+      - ./data:/amass-data:ro
     depends_on:
       assetdb: {condition: service_healthy}
       classifier: {condition: service_healthy}
@@ -72,15 +74,29 @@ services:
     environment:
       XDG_CONFIG_HOME: /data/.config
       AMASS_AI_JOURNAL: /data/ai-review.jsonl
-      # The vulnerable lens's data (NVD and CISA KEV); ai-mcp refreshes it daily.
-      AMASS_VULN_DATA: /data/vulnerabilities.json
-      NVD_API_KEY: ${NVD_API_KEY:-}
+      # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
+      # on the host; ai-mcp refreshes it daily.
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
     volumes:
       - ./config:/.config/amass:ro
       - ./data/ai:/data:rw
+      - ./data:/amass-data:ro
     depends_on:
       assetdb: {condition: service_healthy}
     entrypoint: ["/bin/amass", "lens", "-config", "/.config/amass/config.yaml"]
+
+  # Fetches or refreshes data/vulnerabilities.json (NVD CVEs and CISA KEV) by
+  # hand; ai-mcp also refreshes it daily. Use: docker compose run --rm vuln-update
+  vuln-update:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
+      # An optional NVD API key makes the update faster.
+      NVD_API_KEY: ${NVD_API_KEY:-}
+    volumes:
+      - ./data:/amass-data:rw
+    entrypoint: ["/bin/amass", "vuln-update"]
 
   # The review journal: proposals, approve, reject, retract (no language model).
   # Use: docker compose run --rm review proposals
@@ -154,8 +170,9 @@ services:
     env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
-      # The vulnerable lens's data (NVD and CISA KEV); ai-mcp refreshes it daily.
-      AMASS_VULN_DATA: /data/vulnerabilities.json
+      # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
+      # on the host; ai-mcp refreshes it daily.
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
       # An optional NVD API key makes the refresh faster.
       NVD_API_KEY: ${NVD_API_KEY:-}
       AMASS_AI_MCP_TOKEN: ${AMASS_AI_MCP_TOKEN:-}
@@ -174,6 +191,8 @@ services:
       # Writable only for data source keys entered on the key pages.
       - ./config/datasources.yaml:/.config/amass/datasources.yaml:rw
       - ./data/ai:/data:rw
+      # Writable for the daily vulnerability data refresh.
+      - ./data:/amass-data:rw
     ports:
       - "127.0.0.1:${AMASS_AI_MCP_PORT:-18090}:8090"
     # MCP tools only read the Asset Database; they never call the model or

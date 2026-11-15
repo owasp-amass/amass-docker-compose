@@ -279,11 +279,11 @@ prints the new command.
 
 The `vulnerable` lens checks identified software versions against NVD's CVE
 data and CISA's Known Exploited Vulnerabilities catalog, kept in
-`data/ai/vulnerabilities.json`. The `ai-mcp` service fetches it at start and
+`data/vulnerabilities.json`. The `ai-mcp` service fetches it at start and
 refreshes it daily; to fetch it by hand:
 
 ```bash
-docker compose run --rm lens vuln-update
+docker compose run --rm vuln-update
 docker compose run --rm lens vulnerable -d example.com
 ```
 
@@ -291,8 +291,8 @@ The first fetch takes a few minutes at NVD's rate limit for requests without
 a key; a free NVD API key in `.env` (`NVD_API_KEY=...`) makes it faster.
 
 The `lookalikes` lens reports registered domains one typing mistake from the
-subject's. They are collected during active enumeration
-(`docker compose run --rm enum -active -d example.com`):
+subject's. They are collected during any enumeration, since they need only
+DNS queries (`docker compose run --rm enum -d example.com`):
 
 ```bash
 docker compose run --rm lens lookalikes -d example.com
