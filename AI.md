@@ -501,6 +501,13 @@ To see where time goes in the database:
   `bash scripts/ai-up.sh`. When each session ends, the engine log lists its
   database calls by plugin and kind of call, the costliest first
   (`docker compose logs engine | grep "database calls"`).
+- Sharing between enumerations: every session's DNS queries and waits on
+  data source rate limits are logged by the engine every 10 minutes and
+  when the session ends, so sessions running at the same time can be
+  compared (`docker compose logs engine | grep "shared network use"`). The
+  DNS resolvers and each source's rate limit are shared by all sessions, so
+  each runs slower while others run; adding your own resolvers raises the
+  capacity they share.
 
 All commands now reference the **same `compose.yaml`**. The obsolete
 `compose.ai.yaml`, `compose.ai-stack.yaml`, and
