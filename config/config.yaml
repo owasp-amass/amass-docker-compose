@@ -1,3 +1,10 @@
+# seed lists where an enumeration starts (domains, ips, cidrs, asns), using
+# the same entries as scope. Everything in the seed is in scope too; scope
+# adds the rest of the boundaries, such as an organization's own netblocks,
+# and its ports and blacklist apply. Without a seed, the scope is the start.
+#seed:
+#  domains:
+#    - owasp.org
 scope:
 #  domains: # registered domain names in scope
 #    - owasp.org
