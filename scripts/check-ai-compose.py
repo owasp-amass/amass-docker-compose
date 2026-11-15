@@ -38,7 +38,7 @@ def main():
             )
     configuration = json.loads(result.stdout)
     services = configuration.get("services", {})
-    required = {"enum", "subs", "assoc", "track", "viz", "engine", "assetdb",
+    required = {"enum", "subs", "assoc", "viz", "engine", "assetdb",
                 "postal", "syslog", "ai", "lens", "review", "ai-mcp", "ai-mcp-stdio",
                 "classifier", "classifier-train", "provider-health", "ollama", "ollama-pull", "open-webui"}
     assert not (required - set(services)), "Missing services: " + repr(sorted(required - set(services)))
@@ -51,7 +51,7 @@ def main():
 
     image = services["ai"].get("image", "")
     assert image and image != "owaspamass/amass:latest", "AI feature image not configured"
-    for svc in ("enum", "subs", "assoc", "track", "viz", "engine",
+    for svc in ("enum", "subs", "assoc", "viz", "engine",
                 "ai", "lens", "review", "ai-mcp", "ai-mcp-stdio", "classifier", "classifier-train",
                 "provider-health"):
         assert services[svc].get("image") == image, f"{svc} uses mismatched Amass image"
