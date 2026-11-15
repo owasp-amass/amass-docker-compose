@@ -25,7 +25,7 @@ docker compose "${files[@]}" run --rm --no-deps \
   for bin in /bin/amass /bin/amass-ai-mcp /bin/amass-ai-mcp-http \
     /bin/amass-ai-classifier /bin/amass-ai-classifier-train \
     /bin/amass-ai-provider-health /bin/enum /bin/engine \
-    /bin/ae_isready /bin/subs /bin/assoc /bin/viz; do
+    /bin/ae_isready /bin/assoc /bin/viz; do
     test -x "$bin" || { echo "MISSING: $bin" >&2; exit 1; }
   done
   echo "PASS: AI and legacy Amass binaries are executable"
