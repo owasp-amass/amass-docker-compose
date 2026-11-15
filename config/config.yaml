@@ -9,12 +9,29 @@ scope:
 #  cidrs: # CIDR ranges that are in scope
 #    - 192.0.2.0/24
 #    - 192.0.2.128/25
-  # Ports the HTTP probes try on in-scope names and addresses during active
-  # enumeration. SSH (22) and the mail and file greetings (21, 25, 110, 143,
-  # 465, 587, 993, 995) have their own probes and ports, so they are not
-  # listed here. The ports after the common web ones are management and data
-  # APIs that answer HTTP, so the exposure lens can report them.
+#  asns: # autonomous systems whose announced networks are in scope
+#    - 64496
+  # To probe an organization's own servers for SSH and mail, put its address
+  # space in scope with ips, cidrs or asns above (its netblocks from the
+  # registry, or the AS numbers it operates). Addresses of in-scope names are
+  # probed too; shared hosting and cloud addresses outside the listed space
+  # are not.
+  #
+  # Ports active enumeration may probe on in-scope names and addresses, for
+  # every service. Each probe tries the ports it knows a protocol for: the SSH
+  # probe 22, the greeting probes 21 (FTP), 25 and 587 (SMTP), 465 (SMTPS),
+  # 110 and 995 (POP3), 143 and 993 (IMAP). The HTTP probes try the rest.
+  # Remove a port to stop probing it; ranges such as "8000-8010" work too.
   ports:
+    - 21    # FTP
+    - 22    # SSH
+    - 25    # SMTP
+    - 110   # POP3
+    - 143   # IMAP
+    - 465   # SMTP over TLS
+    - 587   # SMTP submission
+    - 993   # IMAP over TLS
+    - 995   # POP3 over TLS
     - 80
     - 443
     - 8000
@@ -23,6 +40,7 @@ scope:
     - 8888
     - 9443  # web administration consoles
     - 10000 # Webmin
+    # Management and data APIs that answer HTTP; the exposure lens reports them.
     - 2375  # Docker Engine API (unencrypted)
     - 2379  # etcd client API
     - 5984  # CouchDB
