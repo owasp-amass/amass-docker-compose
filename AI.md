@@ -424,7 +424,10 @@ Connected with `--operator`, an assistant can run the whole workflow:
   it plans the enumeration (`plan_enumeration`), shows you the exact scope
   and what it will do, and starts it (`start_enumeration`) only after you
   approve. Passive is the default; active collection (brute forcing, zone
-  transfers, probing hosts) is a separate, clearly marked approval. It can
+  transfers, probing hosts) is a separate, clearly marked approval. One run
+  can cover more targets ("enumerate example.com with AS64496 and
+  192.0.2.0/24 in scope") and allow scope expansion when you ask for it;
+  the approval names every target and whether the scope may expand. It can
   follow progress, stop a run, and tell you what a finished run found.
 - **Ask.** Every lens and investigation, as above.
 - **See.** "Draw what example.com controls" returns a diagram in the chat
