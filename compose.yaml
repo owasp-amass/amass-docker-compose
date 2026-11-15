@@ -51,6 +51,8 @@ services:
       XDG_CONFIG_HOME: /data/.config
       # The review journal the engine's automatic attribution also uses.
       AMASS_AI_JOURNAL: /data/ai-review.jsonl
+      # The vulnerable lens's data (NVD and CISA KEV); ai-mcp refreshes it daily.
+      AMASS_VULN_DATA: /data/vulnerabilities.json
       AMASS_AI_CLASSIFIER_ENDPOINT: http://classifier:8092
       AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
     volumes:
@@ -70,6 +72,9 @@ services:
     environment:
       XDG_CONFIG_HOME: /data/.config
       AMASS_AI_JOURNAL: /data/ai-review.jsonl
+      # The vulnerable lens's data (NVD and CISA KEV); ai-mcp refreshes it daily.
+      AMASS_VULN_DATA: /data/vulnerabilities.json
+      NVD_API_KEY: ${NVD_API_KEY:-}
     volumes:
       - ./config:/.config/amass:ro
       - ./data/ai:/data:rw
@@ -149,6 +154,10 @@ services:
     env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
+      # The vulnerable lens's data (NVD and CISA KEV); ai-mcp refreshes it daily.
+      AMASS_VULN_DATA: /data/vulnerabilities.json
+      # An optional NVD API key makes the refresh faster.
+      NVD_API_KEY: ${NVD_API_KEY:-}
       AMASS_AI_MCP_TOKEN: ${AMASS_AI_MCP_TOKEN:-}
       AMASS_AI_MCP_OPERATOR_TOKEN: ${AMASS_AI_MCP_OPERATOR_TOKEN:-}
       # How the user's browser reaches this server, for drawing, approval and
