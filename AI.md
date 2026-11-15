@@ -405,6 +405,12 @@ Connected with `--operator`, an assistant can run the whole workflow:
 - **Ask.** Every lens and investigation, as above.
 - **See.** "Draw what example.com controls" returns a diagram in the chat
   and a link to an interactive graph (and a Gephi file).
+- **Report.** "Write an attack surface report for example.com" returns one
+  Markdown report: key findings by priority, then each lens's results
+  (`amass lens report -d example.com` on the command line).
+- **Watch.** "Check example.com every week" re-runs the enumeration on that
+  schedule after you approve it once, and tells you what each run found;
+  it can list and stop watches.
 - **Review.** It lists ownership, merge and identity proposals and approves,
   rejects or retracts them; anything that writes asks you first.
 - **Configure.** It tells you which data sources lack API keys and gives

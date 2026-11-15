@@ -155,6 +155,8 @@ services:
       # key links.
       AMASS_AI_MCP_PUBLIC_URL: http://127.0.0.1:${AMASS_AI_MCP_PORT:-18090}
       AMASS_AI_MCP_RUN_JOURNAL: /data/enumerations.jsonl
+      # Targets re-enumerated on a schedule the user approved.
+      AMASS_AI_MCP_WATCHES: /data/watches.json
       AMASS_AI_MCP_REQUIRE_CONFIRMATION: ${AMASS_AI_MCP_REQUIRE_CONFIRMATION:-false}
       # The review journal the engine's automatic attribution writes.
       AMASS_AI_JOURNAL: /data/ai-review.jsonl
