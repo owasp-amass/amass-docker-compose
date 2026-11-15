@@ -96,8 +96,8 @@ Remove the `.env` line (or unset the variable) to return to GitHub builds.
 
 The `ai` service is **not** an independent AI application: its entry point
 is `/bin/amass ai -config /.config/amass/config.yaml`.
-This matches the regular Amass `enum`, `subs`, `assoc`, `track`, and
-`viz` client-service convention. The classifier, provider checker, and
+This matches the regular Amass `enum`, `subs`, `assoc`, and `viz`
+client-service convention. The classifier, provider checker, and
 MCP server are separate persistent supporting processes.
 
 ```bash

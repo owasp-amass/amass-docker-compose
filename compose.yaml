@@ -369,24 +369,6 @@ services:
         condition: service_healthy
     entrypoint: /bin/assoc
 
-  track:
-    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
-    networks:
-      - amass
-    env_file:
-      - ./config/logs/syslog.env
-    volumes:
-      - ./config:/.config/amass:rw
-      - ./data/track:/data:rw
-    depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
-      syslog:
-        condition: service_healthy
-    entrypoint: /bin/track
-
   engine:
     image: ${AMASS_AI_IMAGE:-amass-ai:dev}
     container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-engine

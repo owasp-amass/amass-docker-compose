@@ -35,7 +35,7 @@ RUN go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
 # an opaque final-stage COPY/checksum error.
 RUN for name in amass amass-ai-mcp amass-ai-mcp-http \
   amass-ai-classifier amass-ai-classifier-train amass-ai-provider-health \
-  oam_enum amass_engine ae_isready oam_subs oam_assoc oam_viz oam_track oam_i2y; do \
+  oam_enum amass_engine ae_isready oam_subs oam_assoc oam_viz oam_i2y; do \
     test -x "/go/bin/$name" || { echo >&2 "ERROR: required executable /go/bin/$name was not installed from pinned Amass commit $AMASS_SHA"; exit 1; }; \
   done
 
@@ -61,7 +61,6 @@ COPY --from=build /go/bin/ae_isready /bin/ae_isready
 COPY --from=build /go/bin/oam_subs /bin/subs
 COPY --from=build /go/bin/oam_assoc /bin/assoc
 COPY --from=build /go/bin/oam_viz /bin/viz
-COPY --from=build /go/bin/oam_track /bin/track
 COPY --from=build /go/bin/oam_i2y /bin/i2y
 ENV HOME=/
 USER amass
