@@ -279,8 +279,9 @@ prints the new command.
 
 The `vulnerable` lens checks identified software versions against NVD's CVE
 data and CISA's Known Exploited Vulnerabilities catalog, kept in
-`data/vulnerabilities.json`. The `ai-mcp` service fetches it at start and
-refreshes it daily; to fetch it by hand:
+`data/vulnerabilities.json`. The `vuln-refresh` service, which
+`scripts/ai-up.sh` starts, fetches it and refreshes it once a day; to fetch it
+by hand:
 
 ```bash
 docker compose run --rm vuln-update

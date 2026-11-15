@@ -52,7 +52,7 @@ services:
       # The review journal the engine's automatic attribution also uses.
       AMASS_AI_JOURNAL: /data/ai-review.jsonl
       # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
-      # on the host; ai-mcp refreshes it daily.
+      # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
       AMASS_AI_CLASSIFIER_ENDPOINT: http://classifier:8092
       AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
@@ -75,7 +75,7 @@ services:
       XDG_CONFIG_HOME: /data/.config
       AMASS_AI_JOURNAL: /data/ai-review.jsonl
       # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
-      # on the host; ai-mcp refreshes it daily.
+      # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
     volumes:
       - ./config:/.config/amass:ro
@@ -97,6 +97,20 @@ services:
     volumes:
       - ./data:/amass-data:rw
     entrypoint: ["/bin/amass", "vuln-update"]
+
+  # Keeps data/vulnerabilities.json current: updated once it is a day old or
+  # the catalog gains products. It can write only the data directory and
+  # listens on no port, so ai-mcp can keep data/ read-only.
+  vuln-refresh:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
+      NVD_API_KEY: ${NVD_API_KEY:-}
+    volumes:
+      - ./data:/amass-data:rw
+    entrypoint: ["/bin/amass", "vuln-update", "-every", "24h"]
+    restart: unless-stopped
 
   # The review journal: proposals, approve, reject, retract (no language model).
   # Use: docker compose run --rm review proposals
@@ -171,10 +185,10 @@ services:
     environment:
       XDG_CONFIG_HOME: /data/.config
       # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
-      # on the host; ai-mcp refreshes it daily.
+      # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
-      # An optional NVD API key makes the refresh faster.
-      NVD_API_KEY: ${NVD_API_KEY:-}
+      # vuln-refresh refreshes the data; this server only reads it.
+      AMASS_AI_MCP_VULN_REFRESH: "off"
       AMASS_AI_MCP_TOKEN: ${AMASS_AI_MCP_TOKEN:-}
       AMASS_AI_MCP_OPERATOR_TOKEN: ${AMASS_AI_MCP_OPERATOR_TOKEN:-}
       # How the user's browser reaches this server, for drawing, approval and
@@ -191,8 +205,8 @@ services:
       # Writable only for data source keys entered on the key pages.
       - ./config/datasources.yaml:/.config/amass/datasources.yaml:rw
       - ./data/ai:/data:rw
-      # Writable for the daily vulnerability data refresh.
-      - ./data:/amass-data:rw
+      # Read-only: vuln-refresh keeps the vulnerability data current.
+      - ./data:/amass-data:ro
     ports:
       - "127.0.0.1:${AMASS_AI_MCP_PORT:-18090}:8090"
     # MCP tools only read the Asset Database; they never call the model or

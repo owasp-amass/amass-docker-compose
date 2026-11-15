@@ -215,6 +215,8 @@ echo "Starting Amass, classifier, provider health checker and MCP..."
 "${compose[@]}" up -d --force-recreate --no-deps classifier
 "${compose[@]}" up -d --build --wait --wait-timeout 900 \
   assetdb syslog postal engine classifier provider-health ai-mcp
+# Keeps the vulnerable lens's data current; it has no health check to wait on.
+"${compose[@]}" up -d vuln-refresh
 
 if [[ "$chat" == true ]]; then
   if [[ -z "${AMASS_AI_CHAT_SECRET:-}" ]]; then
