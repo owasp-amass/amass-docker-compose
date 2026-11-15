@@ -470,6 +470,15 @@ docker compose ps
 docker compose logs --tail=100 ai-mcp classifier provider-health engine assetdb
 ```
 
+To see where time goes in the database:
+
+- A lens run: add `-read-stats`, for example
+  `docker compose run --rm lens services -d example.com -read-stats`.
+- An enumeration: set `AMASS_DB_STATS=1` in `.env` and rerun
+  `bash scripts/ai-up.sh`. When each session ends, the engine log lists its
+  database calls by plugin and kind of call, the costliest first
+  (`docker compose logs engine | grep "database calls"`).
+
 All commands now reference the **same `compose.yaml`**. The obsolete
 `compose.ai.yaml`, `compose.ai-stack.yaml`, and
 `compose.ai-isolation.yaml` overlays have been removed.

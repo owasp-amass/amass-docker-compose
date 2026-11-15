@@ -358,6 +358,8 @@ services:
       # shares its review journal with the ai service through ./data/ai.
       - AMASS_AI_ATTRIBUTION=${AMASS_AI_ATTRIBUTION:-auto}
       - AMASS_AI_JOURNAL=/ai/ai-review.jsonl
+      # Set to 1 to log each session's database calls by plugin when it ends.
+      - AMASS_DB_STATS=${AMASS_DB_STATS:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
