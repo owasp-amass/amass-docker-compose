@@ -18,36 +18,15 @@ scope:
   # are not.
   #
   # Ports active enumeration may probe on in-scope names and addresses, for
-  # every service. Each probe tries the ports it knows a protocol for: the SSH
-  # probe 22, the greeting probes 21 (FTP), 25 and 587 (SMTP), 465 (SMTPS),
-  # 110 and 995 (POP3), 143 and 993 (IMAP). The HTTP probes try the rest.
-  # Remove a port to stop probing it; ranges such as "8000-8010" work too.
-  ports:
-    - 21    # FTP
-    - 22    # SSH
-    - 25    # SMTP
-    - 110   # POP3
-    - 143   # IMAP
-    - 465   # SMTP over TLS
-    - 587   # SMTP submission
-    - 993   # IMAP over TLS
-    - 995   # POP3 over TLS
-    - 80
-    - 443
-    - 8000
-    - 8080
-    - 8443
-    - 8888
-    - 9443  # web administration consoles
-    - 10000 # Webmin
-    # Management and data APIs that answer HTTP; the exposure lens reports them.
-    - 2375  # Docker Engine API (unencrypted)
-    - 2379  # etcd client API
-    - 5984  # CouchDB
-    - 6443  # Kubernetes API server
-    - 8500  # Consul HTTP API
-    - 9200  # Elasticsearch / OpenSearch REST API
-    - 10250 # Kubernetes kubelet API
+  # every service. Leave ports out to probe every port the probes know: SSH
+  # (22), FTP (21), SMTP (25, 465, 587), POP3 (110, 995), IMAP (143, 993),
+  # and the web ports and management APIs that answer HTTP (80, 443, 8000,
+  # 8080, 8443, 8888, 9443, 10000, 2375, 2379, 5984, 6443, 8500, 9200,
+  # 10250). List ports only to narrow that; ranges such as "8000-8010" work.
+#  ports:
+#    - 22
+#    - 80
+#    - 443
 #  blacklist: # subdomains to be blacklisted
 #    - example.owasp.org
 options:
