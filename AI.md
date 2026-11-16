@@ -439,9 +439,14 @@ Connected with `--operator`, an assistant can run the whole workflow:
   it can list and stop watches.
 - **Review.** It lists ownership, merge and identity proposals and approves,
   rejects or retracts them; anything that writes asks you first.
-- **Configure.** It tells you which data sources lack API keys and gives
-  you a one-time local link where you paste a key. Keys go from your
-  browser to `config/datasources.yaml`, never through the assistant.
+- **Configure.** "Set up a passive scan of example.com" or "raise the DNS
+  query rate": it reads the configuration schema and current settings
+  (`describe_config`), drafts a change, checks it (`validate_config`), shows
+  you a diff and applies it (`apply_config`) only after you approve. It also
+  tells you which data sources lack API keys and gives you a one-time local
+  link where you paste a key. Keys go from your browser to
+  `config/datasources.yaml`, never through the assistant, and the assistant
+  cannot put a key in the configuration.
 
 How you approve: assistants that support MCP approval dialogs (elicitation)
 ask in their own window. Others give you a one-time link to
@@ -475,7 +480,9 @@ update it in Admin Settings > Integrations. Small local models call tools
 less reliably than large hosted ones; `qwen3:8b` or larger is recommended.
 
 Read-only connections (without `--operator`) can read the Asset Database
-but cannot change it or start an enumeration. Investigation
+but cannot change it or start an enumeration. They can read and check the
+configuration (`describe_config`, `validate_config`) but not apply it.
+Investigation
 answers that need a model (`paths`) use the model configured for this
 stack; every other answer is computed without one, so the assistant's own
 model does the reasoning. The original stdio service also remains
