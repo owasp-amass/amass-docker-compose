@@ -5,3 +5,12 @@
 /.env.ai.local
 __pycache__/
 *.pyc
+
+# Runtime artifacts and machine-specific env (local only, never commit)
+/.env
+/assetdb/
+/lens-results/
+/lens-run.sh
+/logs/*/
+/config/logs/log/
+/config/logs/*.persist
