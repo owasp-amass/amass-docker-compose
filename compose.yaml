@@ -6,11 +6,11 @@
 # The default/release Compose deployment on main is unchanged.
 name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}
 
-# AI services: use scripts/ai-up.sh for single-command startup.
+# AI services: use ./scripts/up for single-command startup.
 x-ai-image: &ai-image
-  image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+  image: ${AMASS_IMAGE:-amass-ai:dev}
   networks: [amass]
-  # Lets AMASS_AI_ENDPOINT=http://host.docker.internal:11434 reach an Ollama
+  # Lets AMASS_LLM_ENDPOINT=http://host.docker.internal:11434 reach an Ollama
   # running on the host (built in on Docker Desktop; needed on Linux Engine).
   extra_hosts: ["host.docker.internal:host-gateway"]
   security_opt: [no-new-privileges:true]
@@ -18,15 +18,15 @@ x-ai-image: &ai-image
 
 x-ai-provider-env: &ai-provider-env
   # Native Ollama API: thinking off, 8K context, schema-constrained planning.
-  AMASS_AI_PROVIDER: ${AMASS_AI_PROVIDER:-ollama}
-  AMASS_AI_ENDPOINT: ${AMASS_AI_ENDPOINT:-http://ollama:11434}
-  AMASS_AI_THINK: ${AMASS_AI_THINK:-false}
-  AMASS_AI_CONTEXT_TOKENS: ${AMASS_AI_CONTEXT_TOKENS:-8192}
-  AMASS_AI_MODEL: ${AMASS_AI_MODEL:-qwen3:8b}
-  AMASS_AI_API_KEY: ${AMASS_AI_API_KEY:-}
-  AMASS_AI_ALLOW_HTTP: ${AMASS_AI_ALLOW_HTTP:-false}
-  AMASS_AI_MODEL_TIMEOUT: ${AMASS_AI_MODEL_TIMEOUT:-4m}
-  AMASS_AI_INVESTIGATION_TIMEOUT: ${AMASS_AI_INVESTIGATION_TIMEOUT:-12m}
+  AMASS_LLM_PROVIDER: ${AMASS_LLM_PROVIDER:-ollama}
+  AMASS_LLM_ENDPOINT: ${AMASS_LLM_ENDPOINT:-http://ollama:11434}
+  AMASS_LLM_THINK: ${AMASS_LLM_THINK:-false}
+  AMASS_LLM_CONTEXT_TOKENS: ${AMASS_LLM_CONTEXT_TOKENS:-8192}
+  AMASS_LLM_MODEL: ${AMASS_LLM_MODEL:-qwen3:8b}
+  AMASS_LLM_API_KEY: ${AMASS_LLM_API_KEY:-}
+  AMASS_LLM_ALLOW_HTTP: ${AMASS_LLM_ALLOW_HTTP:-false}
+  AMASS_LLM_MODEL_TIMEOUT: ${AMASS_LLM_MODEL_TIMEOUT:-4m}
+  AMASS_LLM_INVESTIGATION_TIMEOUT: ${AMASS_LLM_INVESTIGATION_TIMEOUT:-12m}
 
 services:
 
@@ -39,23 +39,23 @@ services:
       context: .
       dockerfile: Dockerfile.ai
       args:
-        AMASS_REF: ${AMASS_AI_AMASS_REF:-feature/ai-investigation-inference}
-        ASSETDB_REF: ${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}
-        AMASS_SHA: ${AMASS_AI_AMASS_SHA:-}
-        ASSETDB_SHA: ${AMASS_AI_ASSETDB_SHA:-}
-        AMASS_UID: ${AMASS_AI_UID:-1000}
-        AMASS_GID: ${AMASS_AI_GID:-1000}
+        AMASS_REF: ${AMASS_SRC_REF:-feature/ai-investigation-inference}
+        ASSETDB_REF: ${ASSETDB_SRC_REF:-feature/ai-investigation-inference}
+        AMASS_SHA: ${AMASS_SRC_SHA:-}
+        ASSETDB_SHA: ${ASSETDB_SRC_SHA:-}
+        AMASS_UID: ${AMASS_UID:-1000}
+        AMASS_GID: ${AMASS_GID:-1000}
     env_file: [./config/logs/syslog.env]
     environment:
       <<: *ai-provider-env
       XDG_CONFIG_HOME: /data/.config
       # The review journal the engine's automatic attribution also uses.
-      AMASS_AI_JOURNAL: /data/review.jsonl
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
       # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
       # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
-      AMASS_AI_CLASSIFIER_ENDPOINT: http://classifier:8092
-      AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
+      AMASS_CLASSIFIER_ENDPOINT: http://classifier:8092
+      AMASS_CLASSIFIER_REVIEW: ${AMASS_CLASSIFIER_REVIEW:-true}
     volumes:
       - ./config:/.config/amass:ro
       - ./data/state:/data:rw
@@ -73,7 +73,7 @@ services:
     env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
-      AMASS_AI_JOURNAL: /data/review.jsonl
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
       # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
       # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
@@ -86,7 +86,7 @@ services:
     entrypoint: ["/bin/amass", "lens", "-config", "/.config/amass/config.yaml"]
 
   # Fetches or refreshes data/vulnerabilities.json (NVD CVEs and CISA KEV) by
-  # hand; ai-mcp also refreshes it daily. Use: docker compose run --rm vuln-update
+  # hand; mcp also refreshes it daily. Use: docker compose run --rm vuln-update
   vuln-update:
     <<: *ai-image
     env_file: [./config/logs/syslog.env]
@@ -100,7 +100,7 @@ services:
 
   # Keeps data/vulnerabilities.json current: updated once it is a day old or
   # the catalog gains products. It can write only the data directory and
-  # listens on no port, so ai-mcp can keep data/ read-only.
+  # listens on no port, so mcp can keep data/ read-only.
   vuln-refresh:
     <<: *ai-image
     env_file: [./config/logs/syslog.env]
@@ -119,7 +119,7 @@ services:
     env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
-      AMASS_AI_JOURNAL: /data/review.jsonl
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
     volumes:
       - ./config:/.config/amass:ro
       - ./data/state:/data:rw
@@ -131,11 +131,11 @@ services:
   classifier:
     <<: *ai-image
     environment:
-      AMASS_AI_CLASSIFIER_MODEL: /models/classifier.json
-      AMASS_AI_CLASSIFIER_LISTEN: 0.0.0.0:8092
+      AMASS_CLASSIFIER_MODEL: /models/classifier.json
+      AMASS_CLASSIFIER_LISTEN: 0.0.0.0:8092
     volumes:
       - ./data/models:/models:ro
-    entrypoint: ["/bin/amass-ai-classifier"]
+    entrypoint: ["/bin/amass-classifier"]
     expose: ["8092"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8092/readyz"]
@@ -152,7 +152,7 @@ services:
     volumes:
       - ./data/classifier-training:/training:ro
       - ./data/models:/models:rw
-    entrypoint: ["/bin/amass-ai-classifier-train"]
+    entrypoint: ["/bin/amass-classifier-train"]
     command:
       - -input
       - /training/labeled.jsonl
@@ -165,7 +165,7 @@ services:
     <<: *ai-image
     environment:
       <<: *ai-provider-env
-    entrypoint: ["/bin/amass-ai-provider-health"]
+    entrypoint: ["/bin/amass-llm-provider-health"]
     expose: ["8091"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8091/readyz"]
@@ -179,7 +179,7 @@ services:
   # reads the Asset Database; the operator token also starts enumerations
   # (each approved by the user), reviews proposals and stores data source
   # keys entered on one-time local pages.
-  ai-mcp:
+  mcp:
     <<: *ai-image
     env_file: [./config/logs/syslog.env]
     environment:
@@ -188,18 +188,18 @@ services:
       # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
       # vuln-refresh refreshes the data; this server only reads it.
-      AMASS_AI_MCP_VULN_REFRESH: "off"
-      AMASS_AI_MCP_TOKEN: ${AMASS_AI_MCP_TOKEN:-}
-      AMASS_AI_MCP_OPERATOR_TOKEN: ${AMASS_AI_MCP_OPERATOR_TOKEN:-}
+      AMASS_MCP_VULN_REFRESH: "off"
+      AMASS_MCP_TOKEN: ${AMASS_MCP_TOKEN:-}
+      AMASS_MCP_OPERATOR_TOKEN: ${AMASS_MCP_OPERATOR_TOKEN:-}
       # How the user's browser reaches this server, for drawing, approval and
       # key links.
-      AMASS_AI_MCP_PUBLIC_URL: http://127.0.0.1:${AMASS_AI_MCP_PORT:-18090}
-      AMASS_AI_MCP_RUN_JOURNAL: /data/enumerations.jsonl
+      AMASS_MCP_PUBLIC_URL: http://127.0.0.1:${AMASS_MCP_PORT:-18090}
+      AMASS_MCP_RUN_JOURNAL: /data/enumerations.jsonl
       # Targets re-enumerated on a schedule the user approved.
-      AMASS_AI_MCP_WATCHES: /data/watches.json
-      AMASS_AI_MCP_REQUIRE_CONFIRMATION: ${AMASS_AI_MCP_REQUIRE_CONFIRMATION:-false}
+      AMASS_MCP_WATCHES: /data/watches.json
+      AMASS_MCP_REQUIRE_CONFIRMATION: ${AMASS_MCP_REQUIRE_CONFIRMATION:-false}
       # The review journal the engine's automatic attribution writes.
-      AMASS_AI_JOURNAL: /data/review.jsonl
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
     volumes:
       - ./config:/.config/amass:ro
       # Writable only for data source keys entered on the key pages.
@@ -208,12 +208,12 @@ services:
       # Read-only: vuln-refresh keeps the vulnerability data current.
       - ./data:/amass-data:ro
     ports:
-      - "127.0.0.1:${AMASS_AI_MCP_PORT:-18090}:8090"
+      - "127.0.0.1:${AMASS_MCP_PORT:-18090}:8090"
     # MCP tools only read the Asset Database; they never call the model or
     # classifier, so MCP must not wait for a model download or warm-up.
     depends_on:
       assetdb: {condition: service_healthy}
-    entrypoint: ["/bin/amass-ai-mcp-http", "-config", "/.config/amass/config.yaml"]
+    entrypoint: ["/bin/amass-mcp-http", "-config", "/.config/amass/config.yaml"]
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/readyz"]
       interval: 15s
@@ -222,7 +222,7 @@ services:
     restart: unless-stopped
 
   # Backward-compatible stdio MCP, only when explicitly run by an MCP client.
-  ai-mcp-stdio:
+  mcp-stdio:
     <<: *ai-image
     profiles: [ai-stdio]
     env_file: [./config/logs/syslog.env]
@@ -235,28 +235,28 @@ services:
       assetdb: {condition: service_healthy}
     stdin_open: true
     tty: false
-    entrypoint: ["/bin/amass-ai-mcp", "-config", "/.config/amass/config.yaml"]
+    entrypoint: ["/bin/amass-mcp", "-config", "/.config/amass/config.yaml"]
 
   # Optional chat UI (profile ai-chat): Open WebUI on the stack's Ollama
   # model, with the Amass MCP server connected in operator mode. Start it
-  # with: AMASS_AI_CHAT=true bash scripts/ai-up.sh
+  # with: ./scripts/up --llm --chat
   open-webui:
     profiles: [ai-chat]
-    image: ${AMASS_AI_CHAT_IMAGE:-ghcr.io/open-webui/open-webui:v0.9.5}
+    image: ${AMASS_CHAT_IMAGE:-ghcr.io/open-webui/open-webui:v0.9.5}
     networks: [amass]
     extra_hosts: ["host.docker.internal:host-gateway"]
     environment:
-      OLLAMA_BASE_URL: ${AMASS_AI_CHAT_OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_BASE_URL: ${AMASS_CHAT_OLLAMA_URL:-http://ollama:11434}
       # Single-user local install: no login page. Set to true before the
       # first start to require accounts.
-      WEBUI_AUTH: ${AMASS_AI_CHAT_AUTH:-false}
-      WEBUI_SECRET_KEY: ${AMASS_AI_CHAT_SECRET:-}
+      WEBUI_AUTH: ${AMASS_CHAT_AUTH:-false}
+      WEBUI_SECRET_KEY: ${AMASS_CHAT_SECRET:-}
       ENABLE_OPENAI_API: "false"
       # Seeds the Amass MCP connection on first start; later changes are made
       # in Admin Settings > Integrations (or by removing data/open-webui).
       TOOL_SERVER_CONNECTIONS: >-
-        [{"type":"mcp","url":"http://ai-mcp:8090/mcp","path":"","auth_type":"bearer",
-        "key":"${AMASS_AI_MCP_OPERATOR_TOKEN:-}","config":{"enable":true},
+        [{"type":"mcp","url":"http://mcp:8090/mcp","path":"","auth_type":"bearer",
+        "key":"${AMASS_MCP_OPERATOR_TOKEN:-}","config":{"enable":true},
         "info":{"id":"amass","name":"Amass","description":"OWASP Amass attack surface data and enumerations"}}]
       ANONYMIZED_TELEMETRY: "false"
       DO_NOT_TRACK: "true"
@@ -264,15 +264,15 @@ services:
     volumes:
       - ./data/open-webui:/app/backend/data:rw
     ports:
-      - "127.0.0.1:${AMASS_AI_CHAT_PORT:-18080}:8080"
+      - "127.0.0.1:${AMASS_CHAT_PORT:-18080}:8080"
     depends_on:
-      ai-mcp: {condition: service_healthy}
+      mcp: {condition: service_healthy}
     restart: unless-stopped
 
-  # Auto-selected by scripts/ai-up.sh for the local Ollama provider.
+  # Auto-selected by ./scripts/up for the local Ollama provider.
   ollama:
     profiles: [ai-local]
-    image: ${AMASS_AI_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
+    image: ${AMASS_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
     networks: [amass]
     environment:
       OLLAMA_HOST: 0.0.0.0:11434
@@ -289,18 +289,18 @@ services:
   # One-shot initializer: model downloads as part of the same 'up' command.
   ollama-pull:
     profiles: [ai-local]
-    image: ${AMASS_AI_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
+    image: ${AMASS_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
     networks: [amass]
     environment:
       OLLAMA_HOST: ollama:11434
     entrypoint: ["/bin/ollama", "pull"]
-    command: ["${AMASS_AI_MODEL:-qwen3:8b}"]
+    command: ["${AMASS_LLM_MODEL:-qwen3:8b}"]
     depends_on:
       ollama: {condition: service_healthy}
     restart: "no"
 
   enum:
-    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    image: ${AMASS_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -316,7 +316,7 @@ services:
     entrypoint: /bin/enum
 
   viz:
-    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    image: ${AMASS_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -334,7 +334,7 @@ services:
     entrypoint: /bin/viz
 
   assoc:
-    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    image: ${AMASS_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -352,7 +352,7 @@ services:
     entrypoint: /bin/assoc
 
   engine:
-    image: ${AMASS_AI_IMAGE:-amass-ai:dev}
+    image: ${AMASS_IMAGE:-amass-ai:dev}
     container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-engine
     working_dir: /.config/amass
     networks:
@@ -362,8 +362,8 @@ services:
       - POSTAL_SERVER_PORT=8000
       # Ownership attribution during enumeration (auto, journal or off); it
       # shares its review journal with the ai service through ./data/state.
-      - AMASS_AI_ATTRIBUTION=${AMASS_AI_ATTRIBUTION:-auto}
-      - AMASS_AI_JOURNAL=/data/review.jsonl
+      - AMASS_ATTRIBUTION=${AMASS_ATTRIBUTION:-auto}
+      - AMASS_REVIEW_JOURNAL=/data/review.jsonl
       # Set to 1 to log each session's database calls by plugin when it ends.
       - AMASS_DB_STATS=${AMASS_DB_STATS:-}
     env_file:

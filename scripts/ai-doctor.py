@@ -37,12 +37,12 @@ def request(url,method,payload,token,session=""):
 
 def main():
     cfg=json.loads(run(*COMPOSE,"config","--format","json"))
-    pub=cfg["services"]["ai-mcp"]["ports"][0]["published"]
-    token=os.environ.get("AMASS_AI_MCP_TOKEN")
+    pub=cfg["services"]["mcp"]["ports"][0]["published"]
+    token=os.environ.get("AMASS_MCP_TOKEN")
     if not token:
         path=Path("data/state/.mcp-token")
         if not path.is_file():
-            sys.exit("ERROR: MCP token not found; run scripts/ai-up.sh")
+            sys.exit("ERROR: MCP token not found; run ./scripts/up")
         token=path.read_text().strip()
     if len(token)<32:sys.exit("ERROR: invalid MCP token")
 

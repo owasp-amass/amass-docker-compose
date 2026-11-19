@@ -39,7 +39,7 @@ def main():
     configuration = json.loads(result.stdout)
     services = configuration.get("services", {})
     required = {"enum", "assoc", "viz", "engine", "assetdb",
-                "postal", "syslog", "ai", "lens", "review", "ai-mcp", "ai-mcp-stdio",
+                "postal", "syslog", "ai", "lens", "review", "mcp", "mcp-stdio",
                 "classifier", "classifier-train", "provider-health", "ollama", "ollama-pull", "open-webui"}
     assert not (required - set(services)), "Missing services: " + repr(sorted(required - set(services)))
     project = configuration.get("name", "")
@@ -52,7 +52,7 @@ def main():
     image = services["ai"].get("image", "")
     assert image and image != "owaspamass/amass:latest", "AI feature image not configured"
     for svc in ("enum", "assoc", "viz", "engine",
-                "ai", "lens", "review", "ai-mcp", "ai-mcp-stdio", "classifier", "classifier-train",
+                "ai", "lens", "review", "mcp", "mcp-stdio", "classifier", "classifier-train",
                 "provider-health"):
         assert services[svc].get("image") == image, f"{svc} uses mismatched Amass image"
     for svc, cmd in (("lens", "lens"), ("review", "review")):
@@ -65,9 +65,9 @@ def main():
     assert not services["provider-health"].get("ports"), "Provider checker must remain private"
     assert not services["classifier"].get("ports"), "Classifier must remain private"
 
-    mcpports = services["ai-mcp"].get("ports", [])
+    mcpports = services["mcp"].get("ports", [])
     assert mcpports and all(p.get("host_ip") == "127.0.0.1" for p in mcpports),         "MCP must only publish to host loopback"
-    assert not services["ai-mcp"].get("profiles"), "Persistent MCP must be a normal Compose service"
+    assert not services["mcp"].get("profiles"), "Persistent MCP must be a normal Compose service"
     assert not services["classifier"].get("profiles"), "Classifier must be a normal Compose service"
     assert "ai-train" in services["classifier-train"].get("profiles", []), "Training must remain an opt-in job"
     assert not services["provider-health"].get("profiles"), "Inference readiness must be a normal Compose service"
@@ -78,12 +78,12 @@ def main():
     assert services["ai"]["build"]["dockerfile"] == "Dockerfile.ai", (
         "AI CLI must use the development Amass image build")
 
-    for svc in ("ai", "ai-mcp"):
+    for svc in ("ai", "mcp"):
         mounts = services[svc].get("volumes", [])
         assert any(v.get("target") == "/.config/amass" and v.get("read_only") for v in mounts), svc
         assert any(v.get("target") == "/data" and not v.get("read_only") for v in mounts), svc
 
-    dependencies = services["ai-mcp"].get("depends_on", {})
+    dependencies = services["mcp"].get("depends_on", {})
     assert dependencies.get("assetdb", {}).get("condition") == "service_healthy", "assetdb"
     for name in ("classifier", "provider-health", "ollama"):
         assert name not in dependencies, f"read-only MCP must not wait for {name}"
@@ -91,12 +91,12 @@ def main():
     chat = services["open-webui"]
     assert "ai-chat" in chat.get("profiles", []), "The chat UI must be an opt-in profile"
     assert all(p.get("host_ip") == "127.0.0.1" for p in chat.get("ports", [])), "Chat UI must only publish to loopback"
-    env = services["ai-mcp"].get("environment", {})
-    for key in ("AMASS_AI_MCP_OPERATOR_TOKEN", "AMASS_AI_MCP_PUBLIC_URL", "AMASS_AI_MCP_RUN_JOURNAL", "AMASS_AI_JOURNAL"):
-        assert key in env, f"ai-mcp lacks {key}"
-    writable = [v for v in services["ai-mcp"].get("volumes", []) if not v.get("read_only")]
+    env = services["mcp"].get("environment", {})
+    for key in ("AMASS_MCP_OPERATOR_TOKEN", "AMASS_MCP_PUBLIC_URL", "AMASS_MCP_RUN_JOURNAL", "AMASS_REVIEW_JOURNAL"):
+        assert key in env, f"mcp lacks {key}"
+    writable = [v for v in services["mcp"].get("volumes", []) if not v.get("read_only")]
     assert {v.get("target") for v in writable} <= {"/data", "/.config/amass/datasources.yaml"}, (
-        "ai-mcp may write only its data directory and the datasources file")
+        "mcp may write only its data directory and the datasources file")
 
     for name in ("ollama", "ollama-pull", "open-webui"):
         image = services[name]["image"]

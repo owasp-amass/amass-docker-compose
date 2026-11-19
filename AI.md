@@ -11,39 +11,68 @@ file retains the test project name `amass-ai-test`, the network
 `amass-ai-test-net`, the existing test bind-mount paths, and loopback
 PostgreSQL and MCP ports. It reuses your existing test database and models.
 
-## Start everything
+## Start and stop
 
-From your existing `amass-compose-ai-test` checkout:
+Bring the stack up with the turnkey wrapper — `./scripts/up` on macOS/Linux, `scripts\up.cmd` or
+`.\scripts\up.ps1` on Windows — and down with `./scripts/down`. From your existing
+`amass-compose-ai-test` checkout:
 
 ```bash
 git fetch origin feature/ai-investigation-inference
 git merge --ff-only origin/feature/ai-investigation-inference
 
-bash scripts/ai-up.sh
+./scripts/up                         # first run asks whether to enable LLM features
 python3 scripts/ai-doctor.py
 bash scripts/ai-connect.sh   # optional: connect your AI assistant (see below)
 ```
 
-That's the entire setup. The startup script:
+The first `./scripts/up` asks **"Enable LLM-powered features? [y/N]"** and records the
+answer in `.env` (`AMASS_LLM=true|false`); later runs reuse it. Collection and the
+always-on classifier run either way — the toggle only adds the LLM layer (model
+inference, the MCP server and the optional chat UI). The classifier is a model,
+not an LLM: the engine applies it in-process for deterministic ownership
+attribution with no model inference, so "no LLM" still correlates evidence.
 
-- Resolves current commit SHAs of both matching feature branches and
-  builds the current Amass image without stale Docker source layers.
+Options (all optional):
+
+| Flag | Effect |
+| --- | --- |
+| `--llm` / `--no-llm` | Enable or disable LLM features and remember the choice. |
+| `--local [PATH]` | Build Amass from a local checkout (default `../amass`) instead of the GitHub branch. |
+| `--branch NAME` | Build Amass and Asset Database from branch `NAME`. |
+| `--chat` | Also start the Open WebUI chat UI (requires `--llm`). |
+
+So `./scripts/up --llm` starts the full AI stack, `./scripts/up --no-llm` the no-LLM core, and
+`./scripts/up --llm --local` builds from `../amass`. Stop everything with `./scripts/down`; the
+persistent database and Ollama models are preserved.
+
+### Windows
+
+Install Docker Desktop and Python 3 (ensure `python` is on `PATH`), then from
+this checkout in PowerShell run `.\scripts\up.ps1 --llm` and `.\scripts\down.ps1`, or in Command
+Prompt `scripts\up.cmd --llm` and `scripts\down.cmd`. The wrappers just run `python scripts\up.py`
+and `python scripts\down.py`. (The `.cmd`/`.ps1` wrappers are new and not yet
+tested on a Windows host; please report any issues.)
+
+### What `up` does
+
+- Resolves current commit SHAs of both matching feature branches and builds the
+  current Amass image without stale Docker source layers.
 - Keeps the existing PostgreSQL test data and Ollama model volumes.
-- Starts Ollama and fetches the requested model only when configured
-  for internal Ollama. A configured HTTPS provider does not start Ollama.
-- Runs the independently deployed classifier, using trained weights
-  if present or safe OAM evidence-based triage otherwise.
-- Starts the engine, PostgreSQL, libpostal, syslog, the provider checker
-  and authenticated MCP Streamable HTTP endpoint.
-- Waits for successful inference-provider and service health checks.
-- Generates/reuses an MCP bearer token in `data/state/.mcp-token`.
-- Records the explicitly selected internal Ollama HTTP opt-in in
-  the **local** `.env`, so ordinary one-file `docker compose run ai`
-  commands work after the startup script exits.
+- Always runs collection (engine, PostgreSQL, libpostal, syslog), the
+  vulnerable-lens data refresher, and the independent classifier, using trained
+  weights if present or safe OAM evidence-based triage otherwise.
+- With LLM enabled: starts Ollama and fetches the requested model only when
+  configured for internal Ollama (a configured HTTPS provider does not start
+  Ollama); waits for successful inference-provider and service health checks;
+  starts the provider checker and the authenticated MCP Streamable HTTP endpoint;
+  generates/reuses the MCP bearer and operator tokens in `data/state/`; and
+  records the internal Ollama HTTP opt-in in the **local** `.env`, so ordinary
+  one-file `docker compose run ai` commands work after `up` exits.
 
-No Internet enumeration or AI-derived database writes are performed by
-startup. Keep your local `.env` and `data/` private. Never commit
-credentials, model weights, or the MCP token.
+No Internet enumeration or AI-derived database writes are performed by startup.
+Keep your local `.env` and `data/` private. Never commit credentials, model
+weights, or the MCP token.
 
 ## Use Ollama on the host for GPU speed (recommended on macOS)
 
@@ -56,10 +85,10 @@ an order of magnitude faster. To use it:
 2. Add to `.env` (with a leading newline, as below):
 
    ```bash
-   printf '\nAMASS_AI_PROVIDER=ollama\nAMASS_AI_ENDPOINT=http://host.docker.internal:11434\n' >> .env
+   printf '\nAMASS_LLM_PROVIDER=ollama\nAMASS_LLM_ENDPOINT=http://host.docker.internal:11434\n' >> .env
    ```
 
-3. Run `bash scripts/ai-up.sh`. It checks that the host Ollama answers on
+3. Run `./scripts/up --llm`. It checks that the host Ollama answers on
    `127.0.0.1:11434`, pulls the configured model there if it is missing,
    stops the in-Docker Ollama and starts the rest of the stack. Containers
    reach the host through `host.docker.internal`.
@@ -68,29 +97,31 @@ Remove the two lines to go back to the in-Docker Ollama.
 
 ## Test a local Amass checkout before pushing
 
-Set `AMASS_AI_LOCAL_AMASS` to a local Amass checkout and the startup script
-builds the image from it, including uncommitted edits, instead of cloning the
-GitHub branch. Asset Database is still cloned at the resolved
-`feature/ai-investigation-inference` commit.
+A local build is **flag-driven**: pass `--local [PATH]` and `up` builds the image
+from that local Amass checkout, including uncommitted edits, instead of cloning
+the GitHub branch. Asset Database is still cloned at the resolved
+`feature/ai-investigation-inference` commit (override with `--branch`).
 
 ```bash
-# Once, from this checkout (paths are relative to it):
-# The leading \n keeps it off the end of a last line that has no newline.
-printf '\nAMASS_AI_LOCAL_AMASS=../amass\n' >> .env
-
-bash scripts/ai-up.sh          # prints "Building LOCAL amass ... (<commit>, branch ...)"
+./scripts/up --llm --local            # or: ./scripts/up --llm --local /path/to/amass
+# prints "Building LOCAL amass ... (<commit>, branch ...)"
 ```
 
-Rerun `bash scripts/ai-up.sh` after changing the Amass checkout; Docker
-rebuilds only when copied files change. Plain `docker compose build` or
-`up --build` does not apply the overlay and would rebuild from GitHub, so
-rebuild through the script, or pass both files:
+`--local` with no path uses `AMASS_LOCAL_SRC` from the environment/`.env` if
+set, otherwise `../amass`. That variable **only supplies the default path** — on
+its own it does **not** trigger a local build, so plain `./scripts/up` (no
+`--local`) always builds from GitHub. Rerun `--local` after changing the
+checkout; Docker rebuilds only when copied files change. Plain
+`docker compose build` or `up --build` does not apply the overlay and would
+rebuild from GitHub, so rebuild through `./scripts/up --local`, or pass both
+files:
 
 ```bash
 docker compose -f compose.yaml -f compose.local-src.yaml build ai
 ```
 
-Remove the `.env` line (or unset the variable) to return to GitHub builds.
+To build from GitHub, just omit `--local` — no need to touch `.env`. To build
+everything from a different branch, use `./scripts/up --branch my-branch`.
 
 ## Amass subcommand services
 
@@ -194,7 +225,7 @@ docker compose run --rm ai train-attribution
 ```
 
 A rejected or retracted proposal is never written again. Set
-`AMASS_AI_ATTRIBUTION=journal` in `.env` to have the engine write nothing
+`AMASS_ATTRIBUTION=journal` in `.env` to have the engine write nothing
 and journal every proposal for review, or `off` to disable attribution,
 then recreate the engine with `docker compose up -d engine`. Details are in
 [Ownership gaps](https://github.com/owasp-amass/amass/blob/feature/ai-investigation-inference/docs/ai/OWNERSHIP_GAPS.md).
@@ -267,7 +298,7 @@ docker compose run --rm review duplicate-signals
 ```
 
 When enumerations finish, the engine records duplicate organizations and
-contradicted identities in the journal, and with `AMASS_AI_ATTRIBUTION=auto`
+contradicted identities in the journal, and with `AMASS_ATTRIBUTION=auto`
 merges the proposed duplicates once no enumeration is still running.
 Identity corrections always wait for a person. Details are in
 [Lenses and review](https://github.com/owasp-amass/amass/blob/feature/ai-investigation-inference/docs/LENSES.md).
@@ -278,8 +309,8 @@ prints the new command.
 
 The `vulnerable` lens checks identified software versions against NVD's CVE
 data and CISA's Known Exploited Vulnerabilities catalog, kept in
-`data/vulnerabilities.json`. The `vuln-refresh` service, which
-`scripts/ai-up.sh` starts, fetches it and refreshes it once a day; to fetch it
+`data/vulnerabilities.json`. The `vuln-refresh` service, which `./scripts/up`
+starts, fetches it and refreshes it once a day; to fetch it
 by hand:
 
 ```bash
@@ -307,16 +338,16 @@ environment settings, which override the YAML section.
 For local inference:
 
 ```dotenv
-AMASS_AI_PROVIDER=ollama
-AMASS_AI_ENDPOINT=http://ollama:11434
-AMASS_AI_MODEL=qwen3:8b
-AMASS_AI_THINK=false
-AMASS_AI_CONTEXT_TOKENS=8192
-AMASS_AI_MODEL_TIMEOUT=4m
-AMASS_AI_INVESTIGATION_TIMEOUT=12m
+AMASS_LLM_PROVIDER=ollama
+AMASS_LLM_ENDPOINT=http://ollama:11434
+AMASS_LLM_MODEL=qwen3:8b
+AMASS_LLM_THINK=false
+AMASS_LLM_CONTEXT_TOKENS=8192
+AMASS_LLM_MODEL_TIMEOUT=4m
+AMASS_LLM_INVESTIGATION_TIMEOUT=12m
 ```
 
-The startup script enables `AMASS_AI_ALLOW_HTTP=true` for the trusted
+The startup script enables `AMASS_LLM_ALLOW_HTTP=true` for the trusted
 internal Ollama service only. Use HTTPS for any remote provider; never
 expose the provider, classifier or database to the public Internet.
 The MCP port is bound to `127.0.0.1:18090` by default.
@@ -348,13 +379,13 @@ Example **schema only** (not training ground truth):
 A separately sourced `unrelated` class is also needed. The trainer
 requires at least 40 examples, at least 20 independent groups and a
 held-out split containing both classes. When labeled data is newer than
-the model, `bash scripts/ai-up.sh` retrains and loads the model
+the model, `./scripts/up --llm` retrains and loads the model
 automatically. Trained scores are **uncalibrated triage signals**, not
 ownership verification.
 
 ## Connect an AI assistant
 
-After `bash scripts/ai-up.sh`, connect the assistant or agent you already
+After `./scripts/up --llm`, connect the assistant or agent you already
 use:
 
 ```bash
@@ -376,7 +407,7 @@ lens (`amass_exposure`, `amass_email`, `amass_attack_surface_overview`,
 | Client | `ai-connect.sh` name | How it connects |
 | --- | --- | --- |
 | Claude Code | `claude-code` | HTTP, through `claude mcp add` (user scope) |
-| Claude Desktop | `claude-desktop` | stdio bridge (`docker exec` into `ai-mcp`) |
+| Claude Desktop | `claude-desktop` | stdio bridge (`docker exec` into `mcp`) |
 | Cursor | `cursor` | HTTP, `~/.cursor/mcp.json` |
 | VS Code, GitHub Copilot agent mode (also Insiders, VSCodium) | `vscode` | HTTP, user `mcp.json` |
 | Windsurf | `windsurf` | HTTP, `mcp_config.json` |
@@ -389,7 +420,7 @@ lens (`amass_exposure`, `amass_email`, `amass_attack_surface_overview`,
 | opencode | `opencode` | HTTP, `opencode.json` |
 | Kiro (IDE and CLI) | `kiro` | HTTP, `~/.kiro/settings/mcp.json` |
 | goose, Continue, JetBrains AI Assistant | `goose`, `continue`, `jetbrains` | printed instructions to paste |
-| Open WebUI | `open-webui` | bundled: `AMASS_AI_CHAT=true bash scripts/ai-up.sh`; or instructions for your own |
+| Open WebUI | `open-webui` | bundled: `./scripts/up --llm --chat`; or instructions for your own |
 | Anything else that speaks MCP | `generic` | prints the URL, header and stdio command |
 
 How it works:
@@ -398,8 +429,8 @@ How it works:
   localhost, `http://127.0.0.1:18090/mcp`, with
   `Authorization: Bearer <contents of data/state/.mcp-token>`.
 - Clients that only start local commands get a stdio bridge,
-  `docker exec -i amass-ai-test-ai-mcp-1 /bin/amass-ai-mcp ...`, which runs
-  inside the already running `ai-mcp` container. Nothing is installed on
+  `docker exec -i amass-ai-test-mcp-1 /bin/amass-mcp ...`, which runs
+  inside the already running `mcp` container. Nothing is installed on
   the host, and Docker is named by its absolute path because desktop apps
   start commands with a short `PATH`.
 - Each file is backed up (`<file>.amass-backup-<time>`) before it changes;
@@ -452,11 +483,11 @@ How you approve: assistants that support MCP approval dialogs (elicitation)
 ask in their own window. Others give you a one-time link to
 `http://127.0.0.1:18090/approve/...` showing the action, which happens
 only when you press Approve. Nothing is collected or written before that.
-Set `AMASS_AI_MCP_REQUIRE_CONFIRMATION=true` in `.env` to refuse actions
+Set `AMASS_MCP_REQUIRE_CONFIRMATION=true` in `.env` to refuse actions
 from clients that offer neither (stdio clients otherwise rely on their own
 tool-approval prompt).
 
-The operator token is `data/state/.mcp-operator-token`; `bash scripts/ai-up.sh`
+The operator token is `data/state/.mcp-operator-token`; `./scripts/up --llm`
 creates it. Runs are recorded in `data/state/enumerations.jsonl`, at most two
 run at once, and each stops after its work settles, 30 minutes without
 progress, or 24 hours.
@@ -466,14 +497,14 @@ progress, or 24 hours.
 No assistant installed? Start the optional chat profile:
 
 ```bash
-AMASS_AI_CHAT=true bash scripts/ai-up.sh
+./scripts/up --llm --chat
 ```
 
 Then open `http://127.0.0.1:18080`. Open WebUI runs on the stack's Ollama
 model (or the Ollama on your computer when configured) with Amass
 connected in operator mode; turn on the Amass tools for a chat from the
 chat's tools menu. It is a single-user local install without a login;
-set `AMASS_AI_CHAT_AUTH=true` before the first start to require accounts.
+set `AMASS_CHAT_AUTH=true` before the first start to require accounts.
 Data lives in `data/open-webui`. Open WebUI reads the Amass connection
 from the environment on its first start; if you rotate the operator token,
 update it in Admin Settings > Integrations. Small local models call tools
@@ -486,7 +517,7 @@ Investigation
 answers that need a model (`paths`) use the model configured for this
 stack; every other answer is computed without one, so the assistant's own
 model does the reasoning. The original stdio service also remains
-available as `ai-mcp-stdio` behind the `ai-stdio` profile.
+available as `mcp-stdio` behind the `ai-stdio` profile.
 
 Check provider, classifier and MCP together without collecting data:
 
@@ -500,7 +531,7 @@ python3 scripts/ai-doctor.py
 python3 scripts/check-ai-compose.py
 bash scripts/check-ai-stack-ready.sh
 docker compose ps
-docker compose logs --tail=100 ai-mcp classifier provider-health engine assetdb
+docker compose logs --tail=100 mcp classifier provider-health engine assetdb
 ```
 
 To see where time goes in the database:
@@ -508,7 +539,7 @@ To see where time goes in the database:
 - A lens run: add `-read-stats`, for example
   `docker compose run --rm lens services -d example.com -read-stats`.
 - An enumeration: set `AMASS_DB_STATS=1` in `.env` and rerun
-  `bash scripts/ai-up.sh`. When each session ends, the engine log lists its
+  `./scripts/up --llm`. When each session ends, the engine log lists its
   database calls by plugin and kind of call, the costliest first
   (`docker compose logs engine | grep "database calls"`).
 - Sharing between enumerations: every session's DNS queries and waits on
@@ -527,7 +558,7 @@ To stop **all** AI test containers, including the separately profiled
 local Ollama service, without deleting data:
 
 ```bash
-bash scripts/ai-down.sh
+./scripts/down
 ```
 
 The startup script now records `COMPOSE_PROFILES=ai-local` in your **local**
@@ -597,6 +628,6 @@ system prune -a`, `docker volume prune`, or `docker compose down -v`
 in this environment.
 
 After allocating sufficient Docker space, simply rerun
-`bash scripts/ai-up.sh`. The resolved source revisions make the
+`./scripts/up --llm`. The resolved source revisions make the
 feature-image rebuild reproducible. No model download or database
 reset is required.

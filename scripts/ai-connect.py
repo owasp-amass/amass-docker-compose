@@ -8,7 +8,7 @@
 Each supported client is described in CLIENTS below: where its MCP
 configuration lives and the entry it expects. Clients that speak Streamable
 HTTP get the authenticated endpoint published on localhost; clients that
-only run local commands get a stdio bridge into the running ai-mcp
+only run local commands get a stdio bridge into the running mcp
 container (docker exec), so no Node or Python package is installed on the
 host. Files are backed up before they are changed, entries are replaced in
 place so running this again updates them, and --remove takes them out.
@@ -37,7 +37,7 @@ from typing import Callable, Optional
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT_PORT = "18090"
 DEFAULT_NAMESPACE = "amass-ai-test"
-STDIO_BINARY = ["/bin/amass-ai-mcp", "-config", "/.config/amass/config.yaml"]
+STDIO_BINARY = ["/bin/amass-mcp", "-config", "/.config/amass/config.yaml"]
 CONTAINER_PORT = "8090"
 
 
@@ -62,7 +62,7 @@ class Endpoint:
         if not self.operator:
             return self.docker, ["exec", "-i", self.container, *STDIO_BINARY]
         # A stdio operator keeps its own run journal, apart from the HTTP server's.
-        return self.docker, ["exec", "-i", "-e", "AMASS_AI_MCP_RUN_JOURNAL=/data/enumerations-stdio.jsonl",
+        return self.docker, ["exec", "-i", "-e", "AMASS_MCP_RUN_JOURNAL=/data/enumerations-stdio.jsonl",
                              self.container, *STDIO_BINARY, "-operator"]
 
 
@@ -80,8 +80,8 @@ def env_value(key: str, default: str = "") -> str:
 
 
 def read_token(operator: bool = False) -> str:
-    env, name = ("AMASS_AI_MCP_OPERATOR_TOKEN", ".mcp-operator-token") if operator else (
-        "AMASS_AI_MCP_TOKEN", ".mcp-token")
+    env, name = ("AMASS_MCP_OPERATOR_TOKEN", ".mcp-operator-token") if operator else (
+        "AMASS_MCP_TOKEN", ".mcp-token")
     token = os.environ.get(env, "")
     path = REPO / "data" / "ai" / name
     if not token and path.exists():
@@ -90,10 +90,10 @@ def read_token(operator: bool = False) -> str:
 
 
 def find_container(docker: str, namespace: str) -> str:
-    """Returns the name of the running ai-mcp container, or the name Compose gives it."""
+    """Returns the name of the running mcp container, or the name Compose gives it."""
     if docker:
         try:
-            r = subprocess.run([docker, "compose", "--project-directory", str(REPO), "ps", "-q", "ai-mcp"],
+            r = subprocess.run([docker, "compose", "--project-directory", str(REPO), "ps", "-q", "mcp"],
                                capture_output=True, text=True, timeout=30)
             cid = r.stdout.strip().splitlines()[0] if r.returncode == 0 and r.stdout.strip() else ""
             if cid:
@@ -103,12 +103,12 @@ def find_container(docker: str, namespace: str) -> str:
                     return r.stdout.strip().lstrip("/")
         except (OSError, subprocess.SubprocessError):
             pass
-    return f"{namespace}-ai-mcp-1"
+    return f"{namespace}-mcp-1"
 
 
 def build_endpoint(name: str, operator: bool = False) -> Endpoint:
     namespace = env_value("AMASS_TEST_NAMESPACE", DEFAULT_NAMESPACE)
-    port = env_value("AMASS_AI_MCP_PORT", DEFAULT_PORT)
+    port = env_value("AMASS_MCP_PORT", DEFAULT_PORT)
     # GUI clients start commands with a short PATH, so the bridge names
     # Docker by its absolute path.
     docker = shutil.which("docker") or ""
@@ -353,12 +353,12 @@ def jetbrains_text(ep: Endpoint) -> str:
 
 def open_webui_text(ep: Endpoint) -> str:
     return ("The stack can run Open WebUI for you, already connected in operator mode:\n"
-            "  AMASS_AI_CHAT=true bash scripts/ai-up.sh   (then open http://127.0.0.1:18080)\n"
+            "  ./scripts/up --llm --chat   (then open http://127.0.0.1:18080)\n"
             "To connect an Open WebUI you run yourself (v0.6.31 or later): Admin Settings > Integrations > "
             "External Tool Servers > Add Connection.\n"
             "  Type: MCP (Streamable HTTP)\n"
             f"  URL:  {ep.url}  (Open WebUI running on this computer outside Docker)\n"
-            f"        http://ai-mcp:{CONTAINER_PORT}/mcp  (Open WebUI in Docker: first run\n"
+            f"        http://mcp:{CONTAINER_PORT}/mcp  (Open WebUI in Docker: first run\n"
             f"        docker network connect {ep.network} <open-webui container>)\n"
             f"  Auth: Bearer, Key: {ep.token}\n")
 
@@ -671,8 +671,8 @@ def check_http(ep: Endpoint) -> str:
     version = init["result"].get("protocolVersion", "?")
     mode = "operator" if "start_enumeration" in names else "read-only"
     if ep.operator and mode != "operator":
-        raise ConfigError("the server did not offer the operator tools; is AMASS_AI_MCP_OPERATOR_TOKEN set "
-                          "for ai-mcp (bash scripts/ai-up.sh sets it)?")
+        raise ConfigError("the server did not offer the operator tools; is AMASS_MCP_OPERATOR_TOKEN set "
+                          "for mcp (./scripts/up --llm sets it)?")
     return f"HTTP OK ({mode}): protocol {version}, {n_tools} tools, {n_prompts} prompts"
 
 
@@ -765,9 +765,9 @@ def main(argv: Optional[list] = None) -> int:
     if not re.fullmatch(r"[A-Za-z0-9_-]+", args.name):
         p.error("--name may contain only letters, digits, '-' and '_'")
     if not args.remove and len(ep.token) < 32 and not args.list:
-        which = ("data/state/.mcp-operator-token", "AMASS_AI_MCP_OPERATOR_TOKEN") if args.operator else (
-            "data/state/.mcp-token", "AMASS_AI_MCP_TOKEN")
-        print(f"ERROR: no MCP token found. Start the stack with: bash scripts/ai-up.sh "
+        which = ("data/state/.mcp-operator-token", "AMASS_MCP_OPERATOR_TOKEN") if args.operator else (
+            "data/state/.mcp-token", "AMASS_MCP_TOKEN")
+        print(f"ERROR: no MCP token found. Start the stack with: ./scripts/up --llm "
               f"(it creates {which[0]}), or export {which[1]}.", file=sys.stderr)
         return 1
 
@@ -824,7 +824,7 @@ def main(argv: Optional[list] = None) -> int:
             print(check_http(ep))
         except (ConfigError, OSError, urllib.error.URLError) as exc:
             print(f"WARNING: the MCP endpoint did not answer ({exc}). Start the stack with "
-                  "bash scripts/ai-up.sh; the entries are in place and work once it runs.", file=sys.stderr)
+                  "./scripts/up --llm; the entries are in place and work once it runs.", file=sys.stderr)
         if any(c.transport == "stdio" for c in chosen if c.kind != "manual"):
             try:
                 print(check_stdio(ep))

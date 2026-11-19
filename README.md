@@ -20,10 +20,12 @@ The `feature/ai-investigation-inference` branch uses **one integrated
 subcommand, classifier, MCP server, and optional inference provider.
 The release deployment on the default branch is unchanged.
 
-After configuring the test checkout and credentials:
+After configuring the test checkout and credentials, start the stack with the
+turnkey wrapper (`./scripts/up` on macOS/Linux; `scripts\up.cmd` or `.\scripts\up.ps1` on Windows) and
+stop it with `./scripts/down`:
 
 ```bash
-bash scripts/ai-up.sh
+./scripts/up                 # first run asks whether to enable LLM features; or ./scripts/up --llm
 python3 scripts/ai-doctor.py
 
 # AI is a regular Compose service whose entrypoint is /bin/amass ai
@@ -32,6 +34,11 @@ docker compose run --rm ai -question "Which organizations are associated with ow
 # Legacy subcommands are unchanged
 docker compose run --rm enum -h
 ```
+
+Collection and the always-on classifier run with no LLM by default; `--llm`
+adds model inference, the MCP server and (with `--chat`) a chat UI. `--local`
+builds from a sibling checkout and `--branch NAME` from another branch; the
+Windows wrappers and every flag are documented in [AI.md](AI.md).
 
 **This branch uses isolated test resources by default:** Docker project
 `amass-ai-test`, PostgreSQL on localhost port `55433`, MCP on localhost
@@ -43,7 +50,7 @@ Code, Codex, Gemini CLI and others), run `bash scripts/ai-connect.sh
 --operator` after the stack is up: the assistant can then start
 enumerations (each one approved by you), answer questions, draw graphs,
 review proposals and help add data source keys. Without an assistant,
-`AMASS_AI_CHAT=true bash scripts/ai-up.sh` adds a local chat UI.
+`./scripts/up --llm --chat` adds a local chat UI.
 
 See [AI.md](AI.md) for provider settings, classifier training, connecting
 assistants over MCP and test-stack checks.

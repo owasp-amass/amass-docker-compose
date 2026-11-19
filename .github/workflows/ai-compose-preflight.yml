@@ -55,9 +55,9 @@ jobs:
           docker compose config --quiet
       - name: Local-source overlay resolves and refuses to run unset
         run: |
-          AMASS_AI_LOCAL_AMASS=. docker compose -f compose.yaml -f compose.local-src.yaml config --quiet
+          AMASS_LOCAL_SRC=. docker compose -f compose.yaml -f compose.local-src.yaml config --quiet
           if docker compose -f compose.yaml -f compose.local-src.yaml config --quiet 2>/dev/null; then
-            echo "overlay must fail without AMASS_AI_LOCAL_AMASS"; exit 1
+            echo "overlay must fail without AMASS_LOCAL_SRC"; exit 1
           fi
 
   image-smoke:

@@ -22,9 +22,9 @@ docker compose "${files[@]}" build ai
 # Assert every expected legacy and new binary is present and executable.
 docker compose "${files[@]}" run --rm --no-deps \
   --entrypoint /bin/sh ai -euc '
-  for bin in /bin/amass /bin/amass-ai-mcp /bin/amass-ai-mcp-http \
-    /bin/amass-ai-classifier /bin/amass-ai-classifier-train \
-    /bin/amass-ai-provider-health /bin/enum /bin/engine \
+  for bin in /bin/amass /bin/amass-mcp /bin/amass-mcp-http \
+    /bin/amass-classifier /bin/amass-classifier-train \
+    /bin/amass-llm-provider-health /bin/enum /bin/engine \
     /bin/ae_isready /bin/assoc /bin/viz; do
     test -x "$bin" || { echo "MISSING: $bin" >&2; exit 1; }
   done

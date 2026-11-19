@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Copyright © by Jeff Foley 2017-2026. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+# SPDX-License-Identifier: Apache-2.0
+
+# Turnkey wrapper: start (up) / stop (down) the Amass feature-branch stack.
+# The real logic is cross-platform Python in scripts/down.py (this directory).
+set -euo pipefail
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if command -v python3 >/dev/null 2>&1; then
+  py=python3
+elif command -v python >/dev/null 2>&1; then
+  py=python
+else
+  echo "ERROR: python3 (or python) is required on PATH" >&2
+  exit 1
+fi
+exec "$py" "$dir/down.py" "$@"

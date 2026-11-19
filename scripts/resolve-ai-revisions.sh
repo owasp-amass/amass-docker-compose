@@ -48,11 +48,11 @@ if path.exists():
             break
 PY
 }
-export AMASS_AI_AMASS_REF="${AMASS_AI_AMASS_REF:-$(_amass_dotenv_ref AMASS_AI_AMASS_REF)}"
-export AMASS_AI_ASSETDB_REF="${AMASS_AI_ASSETDB_REF:-$(_amass_dotenv_ref AMASS_AI_ASSETDB_REF)}"
-export AMASS_AI_AMASS_REF="${AMASS_AI_AMASS_REF:-feature/ai-investigation-inference}"
-export AMASS_AI_ASSETDB_REF="${AMASS_AI_ASSETDB_REF:-feature/ai-investigation-inference}"
-# AMASS_AI_LOCAL_AMASS (exported or in .env) builds Amass from that local
+export AMASS_SRC_REF="${AMASS_SRC_REF:-$(_amass_dotenv_ref AMASS_SRC_REF)}"
+export ASSETDB_SRC_REF="${ASSETDB_SRC_REF:-$(_amass_dotenv_ref ASSETDB_SRC_REF)}"
+export AMASS_SRC_REF="${AMASS_SRC_REF:-feature/ai-investigation-inference}"
+export ASSETDB_SRC_REF="${ASSETDB_SRC_REF:-feature/ai-investigation-inference}"
+# AMASS_LOCAL_SRC (exported or in .env) builds Amass from that local
 # checkout instead of the GitHub branch; asset-db still resolves from GitHub.
 # A key appended to a .env whose last line lacked a newline is glued onto the
 # previous value and silently ignored; refuse to continue in that case.
@@ -61,26 +61,26 @@ if [[ -f .env ]] && grep -Eq '^[^#].*[^[:space:]]AMASS_AI_[A-Z_]+=' .env; then
     "put each KEY=value on its own line" >&2
   return 1 2>/dev/null || exit 1
 fi
-export AMASS_AI_LOCAL_AMASS="${AMASS_AI_LOCAL_AMASS:-$(_amass_dotenv_ref AMASS_AI_LOCAL_AMASS)}"
-if [[ -n "$AMASS_AI_LOCAL_AMASS" ]]; then
-  if [[ ! -f "$AMASS_AI_LOCAL_AMASS/go.mod" ]] || ! grep -q '^module github.com/owasp-amass/amass/' "$AMASS_AI_LOCAL_AMASS/go.mod"; then
-    echo "ERROR: AMASS_AI_LOCAL_AMASS=$AMASS_AI_LOCAL_AMASS is not an Amass checkout" >&2
+export AMASS_LOCAL_SRC="${AMASS_LOCAL_SRC:-$(_amass_dotenv_ref AMASS_LOCAL_SRC)}"
+if [[ -n "$AMASS_LOCAL_SRC" ]]; then
+  if [[ ! -f "$AMASS_LOCAL_SRC/go.mod" ]] || ! grep -q '^module github.com/owasp-amass/amass/' "$AMASS_LOCAL_SRC/go.mod"; then
+    echo "ERROR: AMASS_LOCAL_SRC=$AMASS_LOCAL_SRC is not an Amass checkout" >&2
     return 1 2>/dev/null || exit 1
   fi
-  AMASS_AI_LOCAL_AMASS="$(cd "$AMASS_AI_LOCAL_AMASS" && pwd)"
-  export AMASS_AI_LOCAL_AMASS
-  _local_desc="$(git -C "$AMASS_AI_LOCAL_AMASS" describe --always --dirty 2>/dev/null || echo unknown)"
-  _local_branch="$(git -C "$AMASS_AI_LOCAL_AMASS" branch --show-current 2>/dev/null || true)"
-  AMASS_AI_AMASS_SHA="local"
+  AMASS_LOCAL_SRC="$(cd "$AMASS_LOCAL_SRC" && pwd)"
+  export AMASS_LOCAL_SRC
+  _local_desc="$(git -C "$AMASS_LOCAL_SRC" describe --always --dirty 2>/dev/null || echo unknown)"
+  _local_branch="$(git -C "$AMASS_LOCAL_SRC" branch --show-current 2>/dev/null || true)"
+  AMASS_SRC_SHA="local"
 else
-  AMASS_AI_AMASS_SHA="$(_amass_resolve_revision amass "$AMASS_AI_AMASS_REF" amass)" || return 1 2>/dev/null || exit 1
+  AMASS_SRC_SHA="$(_amass_resolve_revision amass "$AMASS_SRC_REF" amass)" || return 1 2>/dev/null || exit 1
 fi
-AMASS_AI_ASSETDB_SHA="$(_amass_resolve_revision asset-db "$AMASS_AI_ASSETDB_REF" asset-db)" || return 1 2>/dev/null || exit 1
-export AMASS_AI_AMASS_SHA AMASS_AI_ASSETDB_SHA
-if [[ -n "$AMASS_AI_LOCAL_AMASS" ]]; then
+ASSETDB_SRC_SHA="$(_amass_resolve_revision asset-db "$ASSETDB_SRC_REF" asset-db)" || return 1 2>/dev/null || exit 1
+export AMASS_SRC_SHA ASSETDB_SRC_SHA
+if [[ -n "$AMASS_LOCAL_SRC" ]]; then
   printf 'Building LOCAL amass %s (%s, branch %s) with asset-db@%.12s\n' \
-    "$AMASS_AI_LOCAL_AMASS" "$_local_desc" "${_local_branch:-detached}" "$AMASS_AI_ASSETDB_SHA"
+    "$AMASS_LOCAL_SRC" "$_local_desc" "${_local_branch:-detached}" "$ASSETDB_SRC_SHA"
 else
   printf 'Building amass@%.12s and asset-db@%.12s (resolved from feature branches)\n' \
-    "$AMASS_AI_AMASS_SHA" "$AMASS_AI_ASSETDB_SHA"
+    "$AMASS_SRC_SHA" "$ASSETDB_SRC_SHA"
 fi

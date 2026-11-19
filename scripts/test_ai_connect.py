@@ -26,7 +26,7 @@ TOKEN = "t" * 48
 
 def endpoint():
     return ac.Endpoint(name="amass", url="http://127.0.0.1:18090/mcp", token=TOKEN, docker="/usr/bin/docker",
-                       container="amass-ai-test-ai-mcp-1", network="amass-ai-test-net")
+                       container="amass-ai-test-mcp-1", network="amass-ai-test-net")
 
 
 class ConnectTest(unittest.TestCase):
@@ -78,7 +78,7 @@ class ConnectTest(unittest.TestCase):
                 for k, v in fields.items():
                     self.assertEqual(entry[k], v)
                 if "command" in entry:
-                    self.assertEqual(entry["args"][:3], ["exec", "-i", "amass-ai-test-ai-mcp-1"])
+                    self.assertEqual(entry["args"][:3], ["exec", "-i", "amass-ai-test-mcp-1"])
                 else:
                     self.assertEqual(entry["headers"], {"Authorization": "Bearer " + TOKEN})
                 self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600, "a new file holds the token")
@@ -194,7 +194,7 @@ class ConnectTest(unittest.TestCase):
         self.assertNotIn("-operator", reader.stdio()[1])
         args = operator.stdio()[1]
         self.assertEqual(args[-1], "-operator")
-        self.assertIn("AMASS_AI_MCP_RUN_JOURNAL=/data/enumerations-stdio.jsonl", args)
+        self.assertIn("AMASS_MCP_RUN_JOURNAL=/data/enumerations-stdio.jsonl", args)
 
         path = self.home / ".cursor" / "mcp.json"
         path.parent.mkdir()
