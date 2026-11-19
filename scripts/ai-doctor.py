@@ -40,7 +40,7 @@ def main():
     pub=cfg["services"]["ai-mcp"]["ports"][0]["published"]
     token=os.environ.get("AMASS_AI_MCP_TOKEN")
     if not token:
-        path=Path("data/ai/.mcp-token")
+        path=Path("data/state/.mcp-token")
         if not path.is_file():
             sys.exit("ERROR: MCP token not found; run scripts/ai-up.sh")
         token=path.read_text().strip()

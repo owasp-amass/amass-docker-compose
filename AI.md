@@ -36,7 +36,7 @@ That's the entire setup. The startup script:
 - Starts the engine, PostgreSQL, libpostal, syslog, the provider checker
   and authenticated MCP Streamable HTTP endpoint.
 - Waits for successful inference-provider and service health checks.
-- Generates/reuses an MCP bearer token in `data/ai/.mcp-token`.
+- Generates/reuses an MCP bearer token in `data/state/.mcp-token`.
 - Records the explicitly selected internal Ollama HTTP opt-in in
   the **local** `.env`, so ordinary one-file `docker compose run ai`
   commands work after the startup script exits.
@@ -173,7 +173,7 @@ registrant details plus hosting or a shared certificate), it writes the
 missing relationship, using only relationships OAM defines, tagged with
 the `amass-ai` source and a confidence. The assets that brings in join the
 enumeration's scope, the same way Horizontals widens it. Weaker proposals
-wait in the review journal, `data/ai/ai-review.jsonl`.
+wait in the review journal, `data/state/review.jsonl`.
 
 ```bash
 # Proposals and what was written automatically, with their evidence
@@ -189,7 +189,7 @@ docker compose run --rm review retract -proposal own-1a2b3c4d5e6f7a8b -reviewer 
 docker compose run --rm ai review
 
 # After reviewing 40 or more proposals, learn the weights from your decisions;
-# the engine uses data/ai/attribution-model.json from the next enumeration
+# the engine uses data/state/attribution-model.json from the next enumeration
 docker compose run --rm ai train-attribution
 ```
 
@@ -396,7 +396,7 @@ How it works:
 
 - Clients that speak Streamable HTTP use the endpoint published on
   localhost, `http://127.0.0.1:18090/mcp`, with
-  `Authorization: Bearer <contents of data/ai/.mcp-token>`.
+  `Authorization: Bearer <contents of data/state/.mcp-token>`.
 - Clients that only start local commands get a stdio bridge,
   `docker exec -i amass-ai-test-ai-mcp-1 /bin/amass-ai-mcp ...`, which runs
   inside the already running `ai-mcp` container. Nothing is installed on
@@ -456,8 +456,8 @@ Set `AMASS_AI_MCP_REQUIRE_CONFIRMATION=true` in `.env` to refuse actions
 from clients that offer neither (stdio clients otherwise rely on their own
 tool-approval prompt).
 
-The operator token is `data/ai/.mcp-operator-token`; `bash scripts/ai-up.sh`
-creates it. Runs are recorded in `data/ai/enumerations.jsonl`, at most two
+The operator token is `data/state/.mcp-operator-token`; `bash scripts/ai-up.sh`
+creates it. Runs are recorded in `data/state/enumerations.jsonl`, at most two
 run at once, and each stops after its work settles, 30 minutes without
 progress, or 24 hours.
 

@@ -18,11 +18,11 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p data/ai data/models data/ollama data/classifier-training
+mkdir -p data/state data/models data/ollama data/classifier-training
 # Avoid putting bearer secrets into Git-tracked .env. Reuse a persistent,
 # mode-0600 secret under the isolated bind-mounted test data directory.
 if [[ -z "${AMASS_AI_MCP_TOKEN:-}" ]]; then
-  token_file=data/ai/.mcp-token
+  token_file=data/state/.mcp-token
   if [[ ! -s "$token_file" ]]; then
     (umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > "$token_file")
   fi
@@ -35,7 +35,7 @@ fi
 # The operator token unlocks the MCP tools that act (enumerations, reviews,
 # data source keys); each action is still approved by the user.
 if [[ -z "${AMASS_AI_MCP_OPERATOR_TOKEN:-}" ]]; then
-  token_file=data/ai/.mcp-operator-token
+  token_file=data/state/.mcp-operator-token
   if [[ ! -s "$token_file" ]]; then
     (umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > "$token_file")
   fi
@@ -220,7 +220,7 @@ echo "Starting Amass, classifier, provider health checker and MCP..."
 
 if [[ "$chat" == true ]]; then
   if [[ -z "${AMASS_AI_CHAT_SECRET:-}" ]]; then
-    secret_file=data/ai/.chat-secret
+    secret_file=data/state/.chat-secret
     if [[ ! -s "$secret_file" ]]; then
       (umask 077; python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > "$secret_file")
     fi
@@ -244,8 +244,8 @@ fi
 echo "AI profile is healthy; model inference connectivity was verified."
 "${compose[@]}" ps
 echo "MCP URL: http://127.0.0.1:${AMASS_AI_MCP_PORT:-18090}/mcp"
-echo "MCP bearer token: data/ai/.mcp-token (unless provided by environment)"
-echo "MCP operator token: data/ai/.mcp-operator-token (starts enumerations after your approval)"
+echo "MCP bearer token: data/state/.mcp-token (unless provided by environment)"
+echo "MCP operator token: data/state/.mcp-operator-token (starts enumerations after your approval)"
 echo "Connect an AI assistant (Claude, Cursor, VS Code, Codex, Gemini CLI, ...): bash scripts/ai-connect.sh --operator"
 if [[ "$chat" == true ]]; then
   echo "Chat with Amass in your browser: http://127.0.0.1:${AMASS_AI_CHAT_PORT:-18080}"

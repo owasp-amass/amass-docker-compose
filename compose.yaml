@@ -50,7 +50,7 @@ services:
       <<: *ai-provider-env
       XDG_CONFIG_HOME: /data/.config
       # The review journal the engine's automatic attribution also uses.
-      AMASS_AI_JOURNAL: /data/ai-review.jsonl
+      AMASS_AI_JOURNAL: /data/review.jsonl
       # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
       # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
@@ -58,7 +58,7 @@ services:
       AMASS_AI_CLASSIFIER_REVIEW: ${AMASS_AI_CLASSIFIER_REVIEW:-true}
     volumes:
       - ./config:/.config/amass:ro
-      - ./data/ai:/data:rw
+      - ./data/state:/data:rw
       - ./data:/amass-data:ro
     depends_on:
       assetdb: {condition: service_healthy}
@@ -73,13 +73,13 @@ services:
     env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
-      AMASS_AI_JOURNAL: /data/ai-review.jsonl
+      AMASS_AI_JOURNAL: /data/review.jsonl
       # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
       # on the host; vuln-refresh keeps it current.
       AMASS_VULN_DATA: /amass-data/vulnerabilities.json
     volumes:
       - ./config:/.config/amass:ro
-      - ./data/ai:/data:rw
+      - ./data/state:/data:rw
       - ./data:/amass-data:ro
     depends_on:
       assetdb: {condition: service_healthy}
@@ -119,10 +119,10 @@ services:
     env_file: [./config/logs/syslog.env]
     environment:
       XDG_CONFIG_HOME: /data/.config
-      AMASS_AI_JOURNAL: /data/ai-review.jsonl
+      AMASS_AI_JOURNAL: /data/review.jsonl
     volumes:
       - ./config:/.config/amass:ro
-      - ./data/ai:/data:rw
+      - ./data/state:/data:rw
     depends_on:
       assetdb: {condition: service_healthy}
     entrypoint: ["/bin/amass", "review", "-config", "/.config/amass/config.yaml"]
@@ -199,12 +199,12 @@ services:
       AMASS_AI_MCP_WATCHES: /data/watches.json
       AMASS_AI_MCP_REQUIRE_CONFIRMATION: ${AMASS_AI_MCP_REQUIRE_CONFIRMATION:-false}
       # The review journal the engine's automatic attribution writes.
-      AMASS_AI_JOURNAL: /data/ai-review.jsonl
+      AMASS_AI_JOURNAL: /data/review.jsonl
     volumes:
       - ./config:/.config/amass:ro
       # Writable only for data source keys entered on the key pages.
       - ./config/datasources.yaml:/.config/amass/datasources.yaml:rw
-      - ./data/ai:/data:rw
+      - ./data/state:/data:rw
       # Read-only: vuln-refresh keeps the vulnerability data current.
       - ./data:/amass-data:ro
     ports:
@@ -230,7 +230,7 @@ services:
       XDG_CONFIG_HOME: /data/.config
     volumes:
       - ./config:/.config/amass:ro
-      - ./data/ai:/data:rw
+      - ./data/state:/data:rw
     depends_on:
       assetdb: {condition: service_healthy}
     stdin_open: true
@@ -361,16 +361,16 @@ services:
       - POSTAL_SERVER_HOST=postal
       - POSTAL_SERVER_PORT=8000
       # Ownership attribution during enumeration (auto, journal or off); it
-      # shares its review journal with the ai service through ./data/ai.
+      # shares its review journal with the ai service through ./data/state.
       - AMASS_AI_ATTRIBUTION=${AMASS_AI_ATTRIBUTION:-auto}
-      - AMASS_AI_JOURNAL=/ai/ai-review.jsonl
+      - AMASS_AI_JOURNAL=/data/review.jsonl
       # Set to 1 to log each session's database calls by plugin when it ends.
       - AMASS_DB_STATS=${AMASS_DB_STATS:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./data/engine:/.config/amass:rw
-      - ./data/ai:/ai:rw
+      - ./data/state:/data:rw
     expose: 
       - "4000"
     deploy:

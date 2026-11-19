@@ -15,7 +15,7 @@ place so running this again updates them, and --remove takes them out.
 
 The bearer token is written into each client's configuration, because GUI
 applications do not see shell variables. Re-run this script after rotating
-data/ai/.mcp-token.
+data/state/.mcp-token.
 """
 
 from __future__ import annotations
@@ -765,8 +765,8 @@ def main(argv: Optional[list] = None) -> int:
     if not re.fullmatch(r"[A-Za-z0-9_-]+", args.name):
         p.error("--name may contain only letters, digits, '-' and '_'")
     if not args.remove and len(ep.token) < 32 and not args.list:
-        which = ("data/ai/.mcp-operator-token", "AMASS_AI_MCP_OPERATOR_TOKEN") if args.operator else (
-            "data/ai/.mcp-token", "AMASS_AI_MCP_TOKEN")
+        which = ("data/state/.mcp-operator-token", "AMASS_AI_MCP_OPERATOR_TOKEN") if args.operator else (
+            "data/state/.mcp-token", "AMASS_AI_MCP_TOKEN")
         print(f"ERROR: no MCP token found. Start the stack with: bash scripts/ai-up.sh "
               f"(it creates {which[0]}), or export {which[1]}.", file=sys.stderr)
         return 1
