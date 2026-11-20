@@ -83,7 +83,7 @@ def read_token(operator: bool = False) -> str:
     env, name = ("AMASS_MCP_OPERATOR_TOKEN", ".mcp-operator-token") if operator else (
         "AMASS_MCP_TOKEN", ".mcp-token")
     token = os.environ.get(env, "")
-    path = REPO / "data" / "ai" / name
+    path = REPO / "data" / "state" / name
     if not token and path.exists():
         token = path.read_text().strip()
     return token
