@@ -1,3 +1,14 @@
+# seed lists where an enumeration starts (domains, ips, cidrs, asns), using
+# the same entries as scope. Everything in the seed is in scope too; scope
+# adds the rest of the boundaries, such as an organization's own netblocks,
+# and its ports and blacklist apply. Without a seed, the scope is the start.
+#seed:
+#  domains:
+#    - owasp.org
+#  phones: # phone numbers to begin from (seed only)
+#    - +1-555-0100
+#  street_addresses: # street addresses to begin from (seed only)
+#    - 1 Main St, Anytown, CA 94000
 scope:
 #  domains: # registered domain names in scope
 #    - owasp.org
@@ -9,13 +20,24 @@ scope:
 #  cidrs: # CIDR ranges that are in scope
 #    - 192.0.2.0/24
 #    - 192.0.2.128/25
-  ports: # ports to be used when actively scanning services
-    - 80
-    - 443
-    - 8000
-    - 8080
-    - 8443
-    - 8888
+#  asns: # autonomous systems whose announced networks are in scope
+#    - 64496
+  # To probe an organization's own servers for SSH and mail, put its address
+  # space in scope with ips, cidrs or asns above (its netblocks from the
+  # registry, or the AS numbers it operates). Addresses of in-scope names are
+  # probed too; shared hosting and cloud addresses outside the listed space
+  # are not.
+  #
+  # Ports active enumeration may probe on in-scope names and addresses, for
+  # every service. Leave ports out to probe every port the probes know: SSH
+  # (22), FTP (21), SMTP (25, 465, 587), POP3 (110, 995), IMAP (143, 993),
+  # and the web ports and management APIs that answer HTTP (80, 443, 8000,
+  # 8080, 8443, 8888, 9443, 10000, 2375, 2379, 5984, 6443, 8500, 9200,
+  # 10250). List ports only to narrow that; ranges such as "8000-8010" work.
+#  ports:
+#    - 22
+#    - 80
+#    - 443
 #  blacklist: # subdomains to be blacklisted
 #    - example.owasp.org
 options:
@@ -36,22 +58,125 @@ options:
     enabled: false
     wordlists: # wordlist(s) to use that are specific to name alterations
       - "./wordlists/alterations.txt"
-  default_transform_values:
-    ttl: 1440 # minutes. If not specified, the default is 1440 minutes (1 day)
-    confidence: 50 # 50%
-    priority: 5
+  # background_hold: how long a run keeps working on background collection,
+  # such as the web archives' slow queries, once its other work is done.
+  # 0 waits for none: the archives are read only while the run has other work.
+  background_hold: 20m
+  # Several engines that share a PostgreSQL or SQLite Asset Database can
+  # share one enumeration, called a job.
+  # join_running_jobs: when another engine is already enumerating the same
+  # scope on this database, join that enumeration and share its work (true,
+  # the default), or start a separate one (false, as `amass enum -no-join`).
+  # join_running_jobs: true
+  # max_job_workers: the most engines that may work on an enumeration started
+  # with this configuration at once. Pool workers (`amass engine -worker`)
+  # don't join it beyond this, so other enumerations get their help; an
+  # engine asked to enumerate the same scope still joins. Engines that join
+  # use the value the enumeration started with. 0 sets no cap.
+  # max_job_workers: 0
+  # Optional AI settings for the feature-branch amass ai subcommand.
+  # This section is deliberately disabled by default: normal enumeration,
+  # tracking and visualization do not need a model.
+  # ai:
+  #   provider: compatible
+  #   endpoint: http://ollama:11434/v1/chat/completions
+  #   model: qwen3:8b
+  #   allow_http: true    # trusted private Compose network ONLY
+  #   model_timeout: 4m
+  #   attribution: auto   # automatic decisions: auto, journal or off. With this
+  #                       # model, auto also lets it decide admissions into scope
+  #                       # and whether a name is a person's or an organization's
+  #   investigation_timeout: 12m
+  #   max_matches: 20
+  #   max_paths_per_asset: 3
+  #   guidance_rounds: 0
+  #   classifier_endpoint: http://classifier:8092
+  #   classifier_review: true  # trained model routes triage only; never inserts edges
+  #
+  #   # documents: the ONE model allowed to read collected documents (PDFs
+  #   # and Office files), all of each one's text, to find what they state:
+  #   # the hosts, networks, organizations, people, products and addresses
+  #   # they name, how these relate, and their details. Documents are fetched
+  #   # again to be read; the database keeps no copy, and each version is read
+  #   # once. Documents can hold personal or internal details, so this model is
+  #   # named on its own and never falls back to the model above; without it,
+  #   # no model reads documents. Uncomment ONE of the provider choices.
+  #   #
+  #   # Choosing a model (6 documents from one university, read on an Apple
+  #   # silicon Mac with Ollama on the GPU; parts are 12,000 characters, and
+  #   # the counts are parts read in 10 minutes):
+  #   #   qwen3:4b   fastest (14 parts); finds the most, with the most noise
+  #   #   qwen3:30b  (a mixture-of-experts model, about 19 GB) 10 parts;
+  #   #              fewer, steadier findings
+  #   #   qwen3:8b   slowest (7 parts) and the noisiest on long catalogs
+  #   #   claude-haiku-5-5 (hosted) the whole 44-part catalog; the most
+  #   #              accurate findings, at a cost per token
+  #   # A hosted model takes the work off the machine, at a cost per token,
+  #   # and the documents' text leaves it. "amass ai read-documents -domain
+  #   # <domain> -max-documents 6 -reread -dry-run" compares models on your
+  #   # own documents without storing anything.
+  #   documents:
+  #     enabled: true
+  #     # 1) The containerized Ollama started by this Compose project:
+  #     provider: ollama
+  #     endpoint: http://ollama:11434
+  #     model: qwen3:30b    # or qwen3:4b on a machine with less memory
+  #     allow_http: true    # trusted private Compose network ONLY
+  #     # 2) An Ollama running directly on the host machine (bare metal; on a
+  #     #    Mac it uses the GPU, which Docker Desktop cannot):
+  #     # provider: ollama
+  #     # endpoint: http://host.docker.internal:11434   # from a container
+  #     # endpoint: http://127.0.0.1:11434              # outside a container
+  #     # model: qwen3:30b
+  #     # allow_http: true
+  #     # 3) A hosted model, if you are comfortable sending document text to
+  #     #    it (the key is read from the named variable, never written here):
+  #     # provider: anthropic           # or compatible (OpenAI-compatible API)
+  #     # model: claude-haiku-5-5       # the fastest and least costly
+  #     # api_key_env: ANTHROPIC_API_KEY
+  #     # max_chunks: 20                # bounds what one reading costs
+  #     model_timeout: 4m
+  #     # Other models (the investigation model above, MCP clients) see only
+  #     # counts of the findings unless this is true:
+  #     share_with_assistants: false
 
+# ─────────────────────────────────────────────────────────────────────────
+# transformations: which asset types turn into which, how long results are
+# reused (ttl, minutes), and the expansion policy. reach says where an asset
+# must stand for a transformation to run on it: scope (the scope the run was
+# given), footprint (that and what the run admitted into it), connected
+# (linked to the footprint within hops) or any (every asset). A
+# transformation without one takes its FROM->ALL's, then
+# default's below (footprint here, and when nothing sets one). default is
+# the one entry without FROM->TO: the values every transformation takes when
+# it sets none.
+# This file sets the recommended footprint policy. Ready-made policies are in the examples
+# directory beside this file: policy-strict, policy-footprint (recommended),
+# policy-horizontal-discovery, policy-third-party-mapping and
+# policy-broad-passive.
+# ─────────────────────────────────────────────────────────────────────────
 transformations:
+  default:
+    ttl: 1440 # minutes. If not specified, the default is 1440 minutes (1 day)
+    confidence: 50 # evidence needed to admit an asset into scope; above 100 admits nothing
+    priority: 5
+    reach: footprint # the expansion policy described above
   Account->ALL:
     ttl: 10800 # 7 days
   AutnumRecord->ALL:
+  AutnumRecord->RDAP:
+    reach: any # store the record's registrant and contacts, which attribute the network
   AutonomousSystem->ALL:
   AutonomousSystem->RDAP:
     ttl: 43200 # 30 days
+    reach: any # identify every network's registrant, so the target's can be attributed
   ContactRecord->ALL:
   DomainRecord->ALL:
   File->ALL:
   FQDN->ALL:
+  FQDN->DNS:
+    reach: connected # resolve names one relation from the footprint
+    hops: 1
   FQDN->DomainRecord:
     ttl: 43200 # 30 days
   FundsTransfer->ALL:
@@ -63,14 +188,18 @@ transformations:
     ttl: 43200 # 30 days
   IPAddress->ALL:
   IPNetRecord->ALL:
-  Location->ALL:
+  IPNetRecord->RDAP:
+    reach: any # store the record's registrant and contacts, which attribute the network
+  StreetAddress->ALL:
     confidence: 80
   Netblock->ALL:
   Netblock->RDAP:
     ttl: 43200 # 30 days
+    reach: any # identify every network's registrant, so the target's can be attributed
   Organization->ALL:
   Organization->GLEIF:
     ttl: 43200 # 30 days
+    reach: any # identify every organization; collect more only for the target's
   Person->ALL:
     ttl: 43200 # 30 days
   Phone->ALL:
@@ -82,3 +211,5 @@ transformations:
   TLSCertificate->ALL:
     ttl: 10800 # 7 days
   URL->ALL:
+  URL->File:
+    ttl: 43200 # 30 days: a stored document is not fetched again within it

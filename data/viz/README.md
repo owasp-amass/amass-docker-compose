@@ -1,1 +1,0 @@
-This data directory is for the viz service.

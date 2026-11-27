@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Copyright © by Jeff Foley 2017-2026. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+# SPDX-License-Identifier: Apache-2.0
+
+# Non-destructive feature-image smoke test. Requires Docker, no network
+# discovery, no PostgreSQL startup, and no model downloads.
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+if ! command -v docker >/dev/null 2>&1; then
+  echo "ERROR: Docker is required to test the Compose image" >&2
+  exit 1
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "ERROR: Python 3 is required for static topology verification" >&2
+  exit 1
+fi
+source scripts/resolve-ai-revisions.sh
+python3 scripts/check-ai-compose.py
+declare -a files=(-f compose.yaml)
+docker compose "${files[@]}" build ai
+# Assert every expected legacy and new binary is present and executable.
+docker compose "${files[@]}" run --rm --no-deps \
+  --entrypoint /bin/sh ai -euc '
+  for bin in /bin/amass /bin/amass-mcp /bin/amass-mcp-http \
+    /bin/amass-classifier /bin/amass-classifier-train \
+    /bin/amass-llm-provider-health /bin/enum /bin/engine \
+    /bin/ae_isready /bin/assoc; do
+    test -x "$bin" || { echo "MISSING: $bin" >&2; exit 1; }
+  done
+  echo "PASS: AI and legacy Amass binaries are executable"
+'
+# Exercise the standalone entrypoint without starting PostgreSQL,
+# performing network collection, or opening an inference connection.
+docker compose "${files[@]}" run --rm --no-deps \
+  --entrypoint /bin/amass ai -version
+echo "PASS: image smoke check; no legacy service or database started"

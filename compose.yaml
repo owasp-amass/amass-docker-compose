@@ -1,6 +1,340 @@
+# Copyright © by Jeff Foley 2017-2026. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+# SPDX-License-Identifier: Apache-2.0
+
+# Single-file, isolated feature-branch Amass environment.
+# The default/release Compose deployment on main is unchanged.
+name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}
+
+# AI services: use ./scripts/up for single-command startup.
+x-ai-image: &ai-image
+  image: ${AMASS_IMAGE:-amass-ai:dev}
+  networks: [amass]
+  # Lets AMASS_LLM_ENDPOINT=http://host.docker.internal:11434 reach an Ollama
+  # running on the host (built in on Docker Desktop; needed on Linux Engine).
+  extra_hosts: ["host.docker.internal:host-gateway"]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+
+x-ai-provider-env: &ai-provider-env
+  # Native Ollama API: thinking off, 16K context, schema-constrained planning.
+  # The context matches the document model's, so one loaded model serves both:
+  # Ollama reloads a model whenever a request asks for another context size.
+  AMASS_LLM_PROVIDER: ${AMASS_LLM_PROVIDER:-ollama}
+  AMASS_LLM_ENDPOINT: ${AMASS_LLM_ENDPOINT:-http://ollama:11434}
+  AMASS_LLM_THINK: ${AMASS_LLM_THINK:-false}
+  AMASS_LLM_CONTEXT_TOKENS: ${AMASS_LLM_CONTEXT_TOKENS:-16384}
+  AMASS_LLM_MODEL: ${AMASS_LLM_MODEL:-qwen3:8b}
+  AMASS_LLM_API_KEY: ${AMASS_LLM_API_KEY:-}
+  # The variable the main model's key is read from (AMASS_LLM_API_KEY unless
+  # set), such as ANTHROPIC_API_KEY, which hosted models and the document
+  # model can read from your shell's environment or .env.
+  AMASS_LLM_API_KEY_ENV: ${AMASS_LLM_API_KEY_ENV:-AMASS_LLM_API_KEY}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  AMASS_LLM_ALLOW_HTTP: ${AMASS_LLM_ALLOW_HTTP:-false}
+  AMASS_LLM_MODEL_TIMEOUT: ${AMASS_LLM_MODEL_TIMEOUT:-4m}
+  AMASS_LLM_INVESTIGATION_TIMEOUT: ${AMASS_LLM_INVESTIGATION_TIMEOUT:-12m}
+
 services:
+
+  # Optional CLI for ad-hoc investigations; NOT a daemon on 'up -d'.
+  ai:
+    <<: *ai-image
+    # Exactly like enum/assoc: this is a one-shot amass subcommand.
+    # Use: docker compose run --rm ai -question "..." ask
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+      args:
+        AMASS_REF: ${AMASS_SRC_REF:-feature/ai-investigation-inference}
+        ASSETDB_REF: ${ASSETDB_SRC_REF:-feature/ai-investigation-inference}
+        AMASS_SHA: ${AMASS_SRC_SHA:-}
+        ASSETDB_SHA: ${ASSETDB_SRC_SHA:-}
+        AMASS_UID: ${AMASS_UID:-1000}
+        AMASS_GID: ${AMASS_GID:-1000}
+    env_file: [./config/logs/syslog.env]
+    environment:
+      <<: *ai-provider-env
+      XDG_CONFIG_HOME: /data/.config
+      # The review journal the engine's automatic attribution also uses.
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
+      # The key to the data source credentials kept in the Asset Database
+      # (scripts/up makes it; amass secrets manages them).
+      AMASS_SECRETS_KEY_FILE: /data/.secrets-key
+      # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
+      # on the host; vuln-refresh keeps it current.
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
+      AMASS_CLASSIFIER_ENDPOINT: http://classifier:8092
+      AMASS_CLASSIFIER_REVIEW: ${AMASS_CLASSIFIER_REVIEW:-true}
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/state:/data:rw
+      - ./data:/amass-data:ro
+    depends_on:
+      assetdb: {condition: service_healthy}
+      classifier: {condition: service_healthy}
+      provider-health: {condition: service_healthy}
+    entrypoint: ["/bin/amass", "ai", "-config", "/.config/amass/config.yaml"]
+
+  # Read-only views of the Asset Database (no language model). Uses the image
+  # the ai service builds. Use: docker compose run --rm lens family -d example.com
+  lens:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
+      # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
+      # on the host; vuln-refresh keeps it current.
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/state:/data:rw
+      - ./data:/amass-data:ro
+    depends_on:
+      assetdb: {condition: service_healthy}
+    entrypoint: ["/bin/amass", "lens", "-config", "/.config/amass/config.yaml"]
+
+  # Fetches or refreshes data/vulnerabilities.json (NVD CVEs and CISA KEV) by
+  # hand; mcp also refreshes it daily. Use: docker compose run --rm vuln-update
+  vuln-update:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
+      # An optional NVD API key makes the update faster.
+      NVD_API_KEY: ${NVD_API_KEY:-}
+    volumes:
+      - ./data:/amass-data:rw
+    entrypoint: ["/bin/amass", "vuln-update"]
+
+  # Keeps data/vulnerabilities.json current: updated once it is a day old or
+  # the catalog gains products. It can write only the data directory and
+  # listens on no port, so mcp can keep data/ read-only.
+  vuln-refresh:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
+      NVD_API_KEY: ${NVD_API_KEY:-}
+    volumes:
+      - ./data:/amass-data:rw
+    entrypoint: ["/bin/amass", "vuln-update", "-every", "24h"]
+    restart: unless-stopped
+
+  # The review journal: proposals, approve, reject, retract (no language model).
+  # Use: docker compose run --rm review proposals
+  review:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/state:/data:rw
+    depends_on:
+      assetdb: {condition: service_healthy}
+    entrypoint: ["/bin/amass", "review", "-config", "/.config/amass/config.yaml"]
+
+  # Data source credentials kept encrypted in the Asset Database, where the
+  # engine finds them. One-shot, like review; the value is read from stdin:
+  #   docker compose run --rm -T secrets set Shodan apikey < key.txt
+  secrets:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_SECRETS_KEY_FILE: /data/.secrets-key
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/state:/data:rw
+    depends_on:
+      assetdb: {condition: service_healthy}
+    entrypoint: ["/bin/amass", "secrets", "-config", "/.config/amass/config.yaml"]
+
+  # Always-on classifier, fully independent of Ollama/Anthropic/etc.
+  classifier:
+    <<: *ai-image
+    environment:
+      AMASS_CLASSIFIER_MODEL: /models/classifier.json
+      AMASS_CLASSIFIER_LISTEN: 0.0.0.0:8092
+    volumes:
+      - ./data/models:/models:ro
+    entrypoint: ["/bin/amass-classifier"]
+    expose: ["8092"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8092/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+  # On-demand curated training job. The startup script runs this only if
+  # labeled.jsonl exists and classifier.json has not yet been produced.
+  classifier-train:
+    <<: *ai-image
+    profiles: [ai-train]
+    volumes:
+      - ./data/classifier-training:/training:ro
+      - ./data/models:/models:rw
+    entrypoint: ["/bin/amass-classifier-train"]
+    command:
+      - -input
+      - /training/labeled.jsonl
+      - -output
+      - /models/classifier.json
+
+  # Actual inference probe; reports unhealthy until the selected MODEL has
+  # answered a request. Health polling only checks a cached readiness status.
+  provider-health:
+    <<: *ai-image
+    environment:
+      <<: *ai-provider-env
+    entrypoint: ["/bin/amass-llm-provider-health"]
+    expose: ["8091"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8091/readyz"]
+      interval: 20s
+      timeout: 5s
+      start_period: 10m
+      retries: 3
+    restart: unless-stopped
+
+  # Persistent, authenticated Streamable HTTP MCP server. The read-only token
+  # reads the Asset Database; the operator token also starts enumerations
+  # (each approved by the user), reviews proposals and stores data source
+  # keys entered on one-time local pages.
+  mcp:
+    <<: *ai-image
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      # A hosted document model's key (options.ai.documents.api_key_env),
+      # taken from your shell's environment or .env.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # The vulnerable lens's data (NVD and CISA KEV), data/vulnerabilities.json
+      # on the host; vuln-refresh keeps it current.
+      AMASS_VULN_DATA: /amass-data/vulnerabilities.json
+      # vuln-refresh refreshes the data; this server only reads it.
+      AMASS_MCP_VULN_REFRESH: "off"
+      AMASS_MCP_TOKEN: ${AMASS_MCP_TOKEN:-}
+      AMASS_MCP_OPERATOR_TOKEN: ${AMASS_MCP_OPERATOR_TOKEN:-}
+      # How the user's browser reaches this server, for drawing, approval and
+      # key links.
+      AMASS_MCP_PUBLIC_URL: http://127.0.0.1:${AMASS_MCP_PORT:-18090}
+      AMASS_MCP_RUN_JOURNAL: /data/enumerations.jsonl
+      # Targets re-enumerated on a schedule the user approved.
+      AMASS_MCP_WATCHES: /data/watches.json
+      AMASS_MCP_REQUIRE_CONFIRMATION: ${AMASS_MCP_REQUIRE_CONFIRMATION:-false}
+      # The review journal the engine's automatic attribution writes.
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
+      # Keys entered on the key pages go to the Asset Database, encrypted
+      # under this key, where the engine finds them.
+      AMASS_SECRETS_KEY_FILE: /data/.secrets-key
+    volumes:
+      - ./config:/.config/amass:ro
+      # Writable for data source keys entered on the key pages when the
+      # server has no secrets key.
+      - ./config/datasources.yaml:/.config/amass/datasources.yaml:rw
+      - ./data/state:/data:rw
+      # Read-only: vuln-refresh keeps the vulnerability data current.
+      - ./data:/amass-data:ro
+    ports:
+      - "127.0.0.1:${AMASS_MCP_PORT:-18090}:8090"
+    # MCP tools only read the Asset Database; they never call the model or
+    # classifier, so MCP must not wait for a model download or warm-up.
+    depends_on:
+      assetdb: {condition: service_healthy}
+    entrypoint: ["/bin/amass-mcp-http", "-config", "/.config/amass/config.yaml"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/readyz"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+  # Backward-compatible stdio MCP, only when explicitly run by an MCP client.
+  mcp-stdio:
+    <<: *ai-image
+    profiles: [ai-stdio]
+    env_file: [./config/logs/syslog.env]
+    environment:
+      XDG_CONFIG_HOME: /data/.config
+      AMASS_SECRETS_KEY_FILE: /data/.secrets-key
+    volumes:
+      - ./config:/.config/amass:ro
+      - ./data/state:/data:rw
+    depends_on:
+      assetdb: {condition: service_healthy}
+    stdin_open: true
+    tty: false
+    entrypoint: ["/bin/amass-mcp", "-config", "/.config/amass/config.yaml"]
+
+  # Optional chat UI (profile ai-chat): Open WebUI on the stack's Ollama
+  # model, with the Amass MCP server connected in operator mode. Start it
+  # with: ./scripts/up --llm --chat
+  open-webui:
+    profiles: [ai-chat]
+    image: ${AMASS_CHAT_IMAGE:-ghcr.io/open-webui/open-webui:v0.9.5}
+    networks: [amass]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      OLLAMA_BASE_URL: ${AMASS_CHAT_OLLAMA_URL:-http://ollama:11434}
+      # Single-user local install: no login page. Set to true before the
+      # first start to require accounts.
+      WEBUI_AUTH: ${AMASS_CHAT_AUTH:-false}
+      WEBUI_SECRET_KEY: ${AMASS_CHAT_SECRET:-}
+      ENABLE_OPENAI_API: "false"
+      # Seeds the Amass MCP connection on first start; later changes are made
+      # in Admin Settings > Integrations (or by removing data/open-webui).
+      TOOL_SERVER_CONNECTIONS: >-
+        [{"type":"mcp","url":"http://mcp:8090/mcp","path":"","auth_type":"bearer",
+        "key":"${AMASS_MCP_OPERATOR_TOKEN:-}","config":{"enable":true},
+        "info":{"id":"amass","name":"Amass","description":"OWASP Amass attack surface data and enumerations"}}]
+      ANONYMIZED_TELEMETRY: "false"
+      DO_NOT_TRACK: "true"
+      SCARF_NO_ANALYTICS: "true"
+    volumes:
+      - ./data/open-webui:/app/backend/data:rw
+    ports:
+      - "127.0.0.1:${AMASS_CHAT_PORT:-18080}:8080"
+    depends_on:
+      mcp: {condition: service_healthy}
+    restart: unless-stopped
+
+  # Auto-selected by ./scripts/up for the local Ollama provider.
+  ollama:
+    profiles: [ai-local]
+    image: ${AMASS_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
+    networks: [amass]
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    volumes:
+      - ./data/ollama:/root/.ollama:rw
+    expose: ["11434"]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 20s
+      timeout: 10s
+      retries: 8
+    restart: unless-stopped
+
+  # One-shot initializer: model downloads as part of the same 'up' command.
+  ollama-pull:
+    profiles: [ai-local]
+    image: ${AMASS_OLLAMA_IMAGE:-ollama/ollama:0.40.15}
+    networks: [amass]
+    environment:
+      OLLAMA_HOST: ollama:11434
+    entrypoint: ["/bin/ollama", "pull"]
+    command: ["${AMASS_LLM_MODEL:-qwen3:8b}"]
+    depends_on:
+      ollama: {condition: service_healthy}
+    restart: "no"
+
   enum:
-    image: owaspamass/amass:latest
+    image: ${AMASS_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -15,44 +349,8 @@ services:
         condition: service_healthy
     entrypoint: /bin/enum
 
-  viz:
-    image: owaspamass/amass:latest
-    networks:
-      - amass
-    env_file:
-      - ./config/logs/syslog.env
-    volumes:
-      - ./config:/.config/amass:rw
-      - ./data/viz:/data:rw
-    depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
-      syslog:
-        condition: service_healthy
-    entrypoint: /bin/viz
-
-  subs:
-    image: owaspamass/amass:latest
-    networks:
-      - amass
-    env_file:
-      - ./config/logs/syslog.env
-    volumes:
-      - ./config:/.config/amass:rw
-      - ./data/subs:/data:rw
-    depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
-      syslog:
-        condition: service_healthy
-    entrypoint: /bin/subs
-
   assoc:
-    image: owaspamass/amass:latest
+    image: ${AMASS_IMAGE:-amass-ai:dev}
     networks:
       - amass
     env_file:
@@ -69,37 +367,47 @@ services:
         condition: service_healthy
     entrypoint: /bin/assoc
 
-  track:
-    image: owaspamass/amass:latest
-    networks:
-      - amass
-    env_file:
-      - ./config/logs/syslog.env
-    volumes:
-      - ./config:/.config/amass:rw
-      - ./data/track:/data:rw
-    depends_on:
-      assetdb:
-        condition: service_healthy
-#      neo4j:
-#        condition: service_healthy
-      syslog:
-        condition: service_healthy
-    entrypoint: /bin/track
-
   engine:
-    image: owaspamass/amass:latest
-    container_name: engine
+    image: ${AMASS_IMAGE:-amass-ai:dev}
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-engine
     working_dir: /.config/amass
     networks:
       - amass
     environment:
-      - POSTAL_SERVER_HOST=postal
-      - POSTAL_SERVER_PORT=8000
+      # The main model decides the admissions into scope that the evidence
+      # leaves open, when attribution is auto. The document model is
+      # configured on its own (options.ai.documents) and never used for it.
+      <<: *ai-provider-env
+      POSTAL_SERVER_HOST: postal
+      POSTAL_SERVER_PORT: 8000
+      # Ownership attribution during enumeration (auto, journal or off); it
+      # shares its review journal with the ai service through ./data/state.
+      AMASS_ATTRIBUTION: ${AMASS_ATTRIBUTION:-auto}
+      AMASS_REVIEW_JOURNAL: /data/review.jsonl
+      # Data source credentials kept in the Asset Database are encrypted
+      # under this key; the datasources file and AMASS_SECRET_* come first.
+      AMASS_SECRETS_KEY_FILE: /data/.secrets-key
+      # Set to 1 to log each session's database calls by plugin when it ends.
+      AMASS_DB_STATS: ${AMASS_DB_STATS:-}
+      # Queries per second sent to each DNS resolver across all enumerations
+      # (default 15; 0 removes the limit).
+      AMASS_RESOLVER_QPS: ${AMASS_RESOLVER_QPS:-}
+      # Network interface (name or IP address) in the engine container that
+      # its traffic leaves through; empty lets the system choose. An
+      # enumeration can name its own with -iface or options.interface.
+      AMASS_IFACE: ${AMASS_IFACE:-}
+      # Route for active traffic (probes, banners, certificates, zone
+      # transfers): an interface in the engine container, or a proxy URL such
+      # as socks5h://tor:9050. Active traffic never falls back to a direct
+      # connection. AMASS_ACTIVE_UDP_ROUTE names the interface for active UDP,
+      # which a proxy cannot carry.
+      AMASS_ACTIVE_ROUTE: ${AMASS_ACTIVE_ROUTE:-}
+      AMASS_ACTIVE_UDP_ROUTE: ${AMASS_ACTIVE_UDP_ROUTE:-}
     env_file:
       - ./config/logs/syslog.env
     volumes:
       - ./data/engine:/.config/amass:rw
+      - ./data/state:/data:rw
     expose: 
       - "4000"
     deploy:
@@ -128,9 +436,9 @@ services:
     entrypoint: /bin/engine
 
   assetdb:
-    build: https://github.com/owasp-amass/asset-db.git#main
+    build: https://github.com/owasp-amass/asset-db.git#feature/ai-investigation-inference
     shm_size: '4gb'
-    container_name: assetdb
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-assetdb
     networks:
       - amass
     volumes:
@@ -142,7 +450,7 @@ services:
       - AMASS_USER=${AMASS_USER}
       - AMASS_PASSWORD=${AMASS_PASSWORD}
     ports:
-      - "55432:5432"
+      - "127.0.0.1:${AMASS_TEST_DB_PORT:-55433}:5432"
     deploy:
       restart_policy:
         condition: any
@@ -157,7 +465,7 @@ services:
 
   neo4j:
     image: neo4j:latest
-    container_name: neo4j
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-neo4j
     networks:
       - amass
     volumes:
@@ -166,8 +474,8 @@ services:
       - NEO4J_AUTH=neo4j/${AMASS_PASSWORD}
       - NEO4J_server_memory_heap_max__size=4G
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:${AMASS_TEST_NEO4J_HTTP_PORT:-17474}:7474"
+      - "127.0.0.1:${AMASS_TEST_NEO4J_BOLT_PORT:-17687}:7687"
     deploy:
       restart_policy:
         condition: any
@@ -182,7 +490,7 @@ services:
 
   postal:
     build: https://github.com/owasp-amass/libpostal-rest-api.git#main
-    container_name: postal
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-postal
     networks:
       - amass
     environment:
@@ -212,7 +520,7 @@ services:
 
   syslog:
     image: lscr.io/linuxserver/syslog-ng:latest
-    container_name: syslog
+    container_name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-syslog
     networks:
       - amass
     environment:
@@ -236,4 +544,4 @@ services:
 networks:
   amass:
     driver: bridge
-    name: amass-net
+    name: ${AMASS_TEST_NAMESPACE:-amass-ai-test}-net

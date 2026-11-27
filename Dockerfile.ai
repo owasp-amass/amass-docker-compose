@@ -1,0 +1,67 @@
+# Copyright © by Jeff Foley 2017-2026. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+# SPDX-License-Identifier: Apache-2.0
+
+# Development-only image builds the MATCHING Amass and Asset Database
+# feature branches. This never modifies published owaspamass/amass:latest.
+FROM golang:1.27.3-alpine AS build
+RUN apk --no-cache add git ca-certificates
+ARG AMASS_REF=feature/ai-investigation-inference
+ARG ASSETDB_REF=feature/ai-investigation-inference
+# Passed by scripts/resolve-ai-revisions.sh. Using resolved commit SHAs
+# invalidates clone/install cache layers when either branch advances,
+# without forcing a full recompile on every startup.
+ARG AMASS_SHA
+ARG ASSETDB_SHA
+WORKDIR /src
+RUN test -n "$AMASS_SHA" && test -n "$ASSETDB_SHA" \
+ || { echo >&2 "ERROR: missing resolved feature SHAs; use scripts/ai-up.sh or scripts/smoke-ai-image.sh"; exit 1; }
+RUN git clone --single-branch --branch "$ASSETDB_REF" https://github.com/owasp-amass/asset-db.git asset-db \
+ && git clone --single-branch --branch "$AMASS_REF" https://github.com/owasp-amass/amass.git amass \
+ && git -C asset-db checkout --detach "$ASSETDB_SHA" \
+ && git -C amass checkout --detach "$AMASS_SHA" \
+ && test "$(git -C asset-db rev-parse HEAD)" = "$ASSETDB_SHA" \
+ && test "$(git -C amass rev-parse HEAD)" = "$AMASS_SHA" \
+ && printf 'Building pinned commits: asset-db=%s amass=%s\n' "$ASSETDB_SHA" "$AMASS_SHA"
+WORKDIR /src/amass
+# The replacement is for the build stage only, not a committed go.mod edit.
+# Linking the large Amass and engine binaries concurrently can exhaust the
+# Docker Desktop build filesystem (especially on linux/arm64). Limit Go build
+# concurrency and strip debug/symbol tables to lower peak disk consumption.
+# This does not solve an undersized/full Docker disk: see AI.md diagnostics.
+RUN go mod edit -replace=github.com/owasp-amass/asset-db=../asset-db \
+ && CGO_ENABLED=0 GOMAXPROCS=2 go install -p 1 -trimpath -ldflags="-s -w" ./...
+# Fail in the builder stage with a specific missing executable instead of
+# an opaque final-stage COPY/checksum error.
+RUN for name in amass amass-mcp amass-mcp-http \
+  amass-classifier amass-classifier-train amass-llm-provider-health \
+  oam_enum amass_engine ae_isready oam_assoc oam_i2y; do \
+    test -x "/go/bin/$name" || { echo >&2 "ERROR: required executable /go/bin/$name was not installed from pinned Amass commit $AMASS_SHA"; exit 1; }; \
+  done
+
+FROM alpine:latest
+# Default 1000:1000 works for most Linux host bind mounts; configurable for
+# other hosts without running the inference client as root.
+ARG AMASS_UID=1000
+ARG AMASS_GID=1000
+RUN apk --no-cache add bash ca-certificates \
+ && addgroup -S -g "$AMASS_GID" amass \
+ && adduser -S -u "$AMASS_UID" -G amass amass \
+ && mkdir -p /.config/amass /data \
+ && chown -R amass:amass /.config /data
+COPY --from=build /go/bin/amass /bin/amass
+COPY --from=build /go/bin/amass-mcp /bin/amass-mcp
+COPY --from=build /go/bin/amass-mcp-http /bin/amass-mcp-http
+COPY --from=build /go/bin/amass-classifier /bin/amass-classifier
+COPY --from=build /go/bin/amass-classifier-train /bin/amass-classifier-train
+COPY --from=build /go/bin/amass-llm-provider-health /bin/amass-llm-provider-health
+COPY --from=build /go/bin/oam_enum /bin/enum
+COPY --from=build /go/bin/amass_engine /bin/engine
+COPY --from=build /go/bin/ae_isready /bin/ae_isready
+COPY --from=build /go/bin/oam_assoc /bin/assoc
+COPY --from=build /go/bin/oam_i2y /bin/i2y
+ENV HOME=/
+USER amass
+WORKDIR /data
+STOPSIGNAL SIGINT
+ENTRYPOINT ["/bin/amass"]

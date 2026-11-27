@@ -13,7 +13,52 @@
 
 The OWASP Amass Project performs network mapping of attack surfaces and external asset discovery using open source information gathering and active reconnaissance techniques.
 
+## AI feature-branch environment (development)
+
+The `feature/ai-investigation-inference` branch uses **one integrated
+`compose.yaml`** with all existing Amass subcommands, the `amass ai`
+subcommand, classifier, MCP server, and optional inference provider.
+The release deployment on the default branch is unchanged.
+
+After configuring the test checkout and credentials, start the stack with the
+turnkey wrapper (`./scripts/up` on macOS/Linux; `scripts\up.cmd` or `.\scripts\up.ps1` on Windows) and
+stop it with `./scripts/down`:
+
+```bash
+./scripts/up                 # first run asks whether to enable LLM features; or ./scripts/up --llm
+python3 scripts/ai-doctor.py
+
+# AI is a regular Compose service whose entrypoint is /bin/amass ai
+docker compose run --rm ai -question "Which organizations are associated with owasp.org?" -format text ask
+
+# Legacy subcommands are unchanged
+docker compose run --rm enum -h
+```
+
+Collection and the always-on classifier run with no LLM by default; `--llm`
+adds model inference, the MCP server and (with `--chat`) a chat UI. `--local`
+builds from a sibling checkout and `--branch NAME` from another branch; the
+Windows wrappers and every flag are documented in [AI.md](AI.md).
+
+**This branch uses isolated test resources by default:** Docker project
+`amass-ai-test`, PostgreSQL on localhost port `55433`, MCP on localhost
+port `18090`, and separate data directories. Do not reuse production
+database volumes or assume the default-branch published images are in use.
+
+To use Amass from the AI assistant you already have (Claude, Cursor, VS
+Code, Codex, Gemini CLI and others), run `bash scripts/ai-connect.sh
+--operator` after the stack is up: the assistant can then start
+enumerations (each one approved by you), answer questions, draw graphs,
+review proposals and help add data source keys. Without an assistant,
+`./scripts/up --llm --chat` adds a local chat UI.
+
+See [AI.md](AI.md) for provider settings, classifier training, connecting
+assistants over MCP and test-stack checks.
+
 ## Docker Compose Setup Instructions
+
+> The following instructions and port `55432` refer to the ordinary
+> release deployment. For the AI feature branch, use [AI.md](AI.md).
 
 ### Install the Compose Directory
 
@@ -26,7 +71,7 @@ The OWASP Amass Project performs network mapping of attack surfaces and external
 
 1. Recommended: open the `.env` file and assign a new POSTGRES_PASSWORD and AMASS_PASSWORD. Save. **This cannot be performed after you start the Docker Compose and the database has been created.**
 2. Make desired changes to the `config.yaml` file, being sure to replace the password field of the `database` value with the password you assigned as your AMASS_PASSWORD. Save.
-3. Optional: update your `datasources.yaml` file by uncommenting data sources and adding account credentials.
+3. Optional: update your `datasources.yaml` file by uncommenting data sources and adding account credentials. With the AI stack (`./scripts/up`), you can instead keep keys encrypted in the Asset Database, where every engine on it finds them: `docker compose run --rm -T secrets set Shodan apikey < shodan.key`, and `docker compose run --rm secrets list` to see what is stored. Their key, `data/state/.secrets-key`, is made by `./scripts/up`; back it up with the database.
 
 ### Build the Docker Images
 
