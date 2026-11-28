@@ -558,6 +558,16 @@ To see where time goes in the database:
   `./scripts/up --llm`. When each session ends, the engine log lists its
   database calls by plugin and kind of call, the costliest first
   (`docker compose logs engine | grep "database calls"`).
+- Automatic decisions during an enumeration: each pass logs, for every
+  organization, how large its footprint was and how many database reads
+  and how much time its search took
+  (`docker compose logs engine | grep "AI attribution pass"`). The passes
+  keep what they read between passes and drop only what changed. To check
+  that this matches a search without it, set
+  `options.ai.attribution_canary_every: 10` in `config/config.yaml`; every
+  tenth pass then logs whether the two searches matched
+  (`grep "AI attribution canary"`). Leave it off otherwise: each check
+  costs a full search.
 - Sharing between enumerations: every session's DNS queries and waits on
   data source rate limits are logged by the engine every 10 minutes and
   when the session ends, so sessions running at the same time can be
