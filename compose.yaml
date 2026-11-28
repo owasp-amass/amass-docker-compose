@@ -392,6 +392,13 @@ services:
       # Queries per second sent to each DNS resolver across all enumerations
       # (default 15; 0 removes the limit).
       AMASS_RESOLVER_QPS: ${AMASS_RESOLVER_QPS:-}
+      # Active probes in flight at once from the engine's public address, to
+      # one registered domain, one host name and one IP address (defaults 16,
+      # 2 and 4; 0 removes a limit). An enumeration's options.probe_per_*
+      # can set lower limits for its own probes.
+      AMASS_PROBE_PER_DOMAIN: ${AMASS_PROBE_PER_DOMAIN:-}
+      AMASS_PROBE_PER_NAME: ${AMASS_PROBE_PER_NAME:-}
+      AMASS_PROBE_PER_ADDRESS: ${AMASS_PROBE_PER_ADDRESS:-}
       # Network interface (name or IP address) in the engine container that
       # its traffic leaves through; empty lets the system choose. An
       # enumeration can name its own with -iface or options.interface.
