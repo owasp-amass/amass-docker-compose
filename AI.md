@@ -434,7 +434,8 @@ lens (`amass_exposure`, `amass_email`, `amass_attack_surface_overview`,
 | LM Studio | `lm-studio` | HTTP, `~/.lmstudio/mcp.json` |
 | opencode | `opencode` | HTTP, `opencode.json` |
 | Kiro (IDE and CLI) | `kiro` | HTTP, `~/.kiro/settings/mcp.json` |
-| goose, Continue, JetBrains AI Assistant | `goose`, `continue`, `jetbrains` | printed instructions to paste |
+| Kit | `kit` | HTTP, `mcpServers` in `~/.kit.yml` (or `~/.kit.json`) |
+| goose, Continue, JetBrains AI Assistant, Cherry Studio | `goose`, `continue`, `jetbrains`, `cherry-studio` | printed instructions to paste |
 | Open WebUI | `open-webui` | bundled: `./scripts/up --llm --chat`; or instructions for your own |
 | Anything else that speaks MCP | `generic` | prints the URL, header and stdio command |
 
@@ -454,6 +455,13 @@ How it works:
   comments (Zed and VS Code settings often have them) keeps its comments
   when the entry is new; changing an existing entry in such a file needs
   `--force`.
+- Kit's YAML file is edited in place: only the `amass` entry under
+  `mcpServers` changes, and comments and other settings stay as they are.
+  An `amass` entry you added by hand, such as a local `docker exec`
+  command, is replaced by the HTTP one.
+- Cherry Studio keeps its servers in its own database, which shouldn't be
+  written while it runs, so the script prints the JSON to paste into
+  Settings > MCP > MCP Servers > Add > Import from JSON.
 - The token is written into each client's configuration, because desktop
   applications do not see shell variables. A new file is created readable
   only by you. After rotating the token, run the script again.

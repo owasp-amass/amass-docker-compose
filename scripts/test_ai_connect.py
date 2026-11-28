@@ -166,7 +166,7 @@ class ConnectTest(unittest.TestCase):
         self.assertEqual(path.read_text(), "{ not json")
 
     def test_manual_clients_print_instructions(self):
-        for cid in ("goose", "continue", "jetbrains", "open-webui", "web", "generic"):
+        for cid in ("goose", "continue", "jetbrains", "open-webui", "web", "generic", "cherry-studio"):
             with self.subTest(cid):
                 r = self.connect(cid)[0]
                 self.assertTrue(r.message)
@@ -201,6 +201,58 @@ class ConnectTest(unittest.TestCase):
         ac.apply(ac.BY_ID["cursor"], operator, False, False, False)
         self.assertEqual(json.loads(path.read_text())["mcpServers"]["amass"]["headers"]["Authorization"],
                          "Bearer " + "o" * 48)
+
+    def test_kit_yaml_replaces_the_entry_and_keeps_the_rest(self):
+        path = self.home / ".kit.yml"
+        original = ("# KIT Configuration File\n# mcpServers:\n#   websearch:\n#     type: \"remote\"\n\n"
+                    "mcpServers:\n  other:\n    type: \"local\"\n    command: [\"npx\", \"x\"]\n"
+                    "  amass:\n    type: \"local\"\n    command:\n      - /usr/bin/docker\n      - exec\n\n"
+                    "model: anthropic/claude\nmax-tokens: 4096\n")
+        path.write_text(original)
+        self.assertTrue(ac.configured(ac.BY_ID["kit"], endpoint()))
+        r = self.connect("kit")[0]
+        self.assertEqual(r.action, "updated")
+        self.assertTrue(r.backup and r.backup.read_text() == original)
+        text = path.read_text()
+        self.assertIn("# KIT Configuration File\n# mcpServers:\n#   websearch:", text)
+        self.assertIn("  other:\n    type: \"local\"\n    command: [\"npx\", \"x\"]\n", text)
+        self.assertIn("  amass:\n    type: \"remote\"\n    url: \"http://127.0.0.1:18090/mcp\"\n"
+                      "    headers:\n      - \"Authorization: Bearer " + TOKEN + "\"\n\nmodel: anthropic/claude\n"
+                      "max-tokens: 4096\n", text)
+        self.assertNotIn("exec", text)
+        self.assertEqual(self.connect("kit")[0].action, "unchanged")
+
+        self.assertEqual(self.connect("kit", remove=True)[0].action, "removed")
+        text = path.read_text()
+        self.assertNotIn("amass:", text)
+        self.assertIn("  other:", text)
+        self.assertIn("model: anthropic/claude", text)
+
+    def test_kit_yaml_without_servers_and_kit_json(self):
+        path = self.home / ".kit.yml"
+        path.write_text("model: anthropic/claude\n")
+        self.assertEqual(self.connect("kit")[0].action, "added")
+        self.assertTrue(path.read_text().startswith("model: anthropic/claude\n\nmcpServers:\n  amass:\n"))
+
+        path.unlink()
+        (self.home / ".kit.json").write_text('{"model": "x"}')
+        self.assertEqual(self.connect("kit")[0].action, "added")
+        entry = json.loads((self.home / ".kit.json").read_text())["mcpServers"]["amass"]
+        self.assertEqual(entry, {"type": "remote", "url": "http://127.0.0.1:18090/mcp",
+                                 "headers": ["Authorization: Bearer " + TOKEN]})
+
+    def test_kit_yaml_inline_servers_is_refused(self):
+        (self.home / ".kit.yml").write_text("mcpServers: {other: {type: local}}\n")
+        with self.assertRaises(ac.ConfigError):
+            self.connect("kit")
+
+    def test_cherry_studio_prints_its_import_json(self):
+        r = self.connect("cherry-studio")[0]
+        self.assertEqual(r.action, "manual")
+        self.assertIn("Import from JSON", r.message)
+        entry = json.loads(r.message[r.message.index("{"):])["mcpServers"]["amass"]
+        self.assertEqual(entry, {"type": "streamableHttp", "url": "http://127.0.0.1:18090/mcp",
+                                 "headers": {"Authorization": "Bearer " + TOKEN}})
 
     def test_strip_jsonc_keeps_strings(self):
         text, lossy = ac.strip_jsonc('{"a": "http://x//y", /* c */ "b": [1,],}')

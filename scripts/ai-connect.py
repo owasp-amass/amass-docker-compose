@@ -254,7 +254,9 @@ class Client:
     id: str
     name: str
     # json: an MCP entry inside a JSON file; toml: a table in a TOML file;
-    # cli: the client's own command; manual: printed instructions.
+    # yaml: an entry under mcpServers in a YAML file (a .json file of the
+    # same client is written as json); cli: the client's own command;
+    # manual: printed instructions.
     kind: str
     paths: Callable[[], list[Path]] = lambda: []
     keys: list = field(default_factory=lambda: ["mcpServers"])
@@ -329,6 +331,22 @@ def zed_paths() -> list[Path]:
 def opencode_paths() -> list[Path]:
     d = xdg_config() / "opencode"
     return [d / "opencode.json", d / "opencode.jsonc"]
+
+
+def kit_paths() -> list[Path]:
+    return [home() / ".kit.yml", home() / ".kit.yaml", home() / ".kit.json"]
+
+
+def kit_entry(ep: Endpoint) -> dict:
+    return {"type": "remote", "url": ep.url, "headers": ["Authorization: Bearer " + ep.token]}
+
+
+def cherry_studio_text(ep: Endpoint) -> str:
+    # Cherry Studio keeps its servers in its own database, which must not be
+    # written while it runs, and its install link's payload is undocumented.
+    entry = {"mcpServers": {ep.name: {"type": "streamableHttp", "url": ep.url, "headers": ep.headers()}}}
+    return ("In Cherry Studio: Settings > MCP > MCP Servers > Add > Import from JSON, paste the following "
+            "and save:\n\n" + json.dumps(entry, indent=2) + "\n")
 
 
 def goose_text(ep: Endpoint) -> str:
@@ -415,6 +433,10 @@ CLIENTS: list[Client] = [
            detect_dirs=lambda: [xdg_config() / "opencode"]),
     Client("kiro", "Kiro (IDE and CLI)", "json", paths=lambda: [home() / ".kiro" / "settings" / "mcp.json"],
            entry=http_url_headers, commands=["kiro", "kiro-cli"], detect_dirs=lambda: [home() / ".kiro"]),
+    Client("kit", "Kit", "yaml", paths=kit_paths, entry=kit_entry, commands=["kit"],
+           detect_dirs=lambda: [home() / ".kit"]),
+    Client("cherry-studio", "Cherry Studio", "manual", instructions=cherry_studio_text,
+           detect_dirs=lambda: app_support("CherryStudio") + [home() / ".cherrystudio"]),
     Client("goose", "goose", "manual", instructions=goose_text, commands=["goose"],
            detect_dirs=lambda: [xdg_config() / "goose"]),
     Client("continue", "Continue", "manual", instructions=continue_text,
@@ -573,6 +595,99 @@ def toml_apply(client: Client, ep: Endpoint, path: Path, remove: bool, force: bo
     return Result(client, path, action, saved)
 
 
+YAML_KEY = re.compile(r"^(\s*)([A-Za-z0-9_.\"'-]+):(.*)$")
+
+
+def yaml_indent(line: str) -> Optional[int]:
+    """The indent of a line that holds content: None for blank and comment lines."""
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+    return len(line) - len(line.lstrip(" "))
+
+
+def yaml_block(ep: Endpoint, indent: str) -> list[str]:
+    entry = kit_entry(ep)
+    return [f"{indent}{ep.name}:\n",
+            f"{indent}  type: {json.dumps(entry['type'])}\n",
+            f"{indent}  url: {json.dumps(entry['url'])}\n",
+            f"{indent}  headers:\n",
+            *[f"{indent}    - {json.dumps(h)}\n" for h in entry["headers"]]]
+
+
+def yaml_servers(lines: list[str]) -> tuple[int, int, str]:
+    """Finds the top-level mcpServers mapping: the index of its line, the index
+    after its last entry, and its entries' indent. (-1, -1, "") when absent."""
+    for i, line in enumerate(lines):
+        m = YAML_KEY.match(line)
+        if not m or m.group(1) or m.group(2).strip("\"'") != "mcpServers":
+            continue
+        rest = m.group(3).split("#", 1)[0].strip()
+        if rest not in ("", "{}"):
+            raise ConfigError("mcpServers is written inline; edit it by hand")
+        end, indent = i + 1, ""
+        for j in range(i + 1, len(lines)):
+            n = yaml_indent(lines[j])
+            if n is None:
+                continue
+            if n == 0:
+                break
+            indent = indent or " " * n
+            end = j + 1
+        return i, end, indent or "  "
+    return -1, -1, ""
+
+
+def yaml_entry_span(lines: list[str], start: int, end: int, indent: str, name: str) -> tuple[int, int]:
+    """The lines of one server under mcpServers; (-1, -1) when it is not there."""
+    for i in range(start + 1, end):
+        m = YAML_KEY.match(lines[i])
+        if m and m.group(1) == indent and m.group(2).strip("\"'") == name:
+            j = i + 1
+            while j < end and (yaml_indent(lines[j]) is None or yaml_indent(lines[j]) > len(indent)):
+                j += 1
+            while j > i + 1 and yaml_indent(lines[j - 1]) is None:
+                j -= 1  # leave blank lines and comments after the entry where they are
+            return i, j
+    return -1, -1
+
+
+def yaml_apply(client: Client, ep: Endpoint, path: Path, remove: bool, force: bool, dry: bool) -> Result:
+    """Adds, replaces or removes the server under mcpServers, keeping the rest of
+    the file, comments included, as it is."""
+    if path.suffix == ".json":
+        return json_apply(client, ep, path, remove, force, dry)
+    text = path.read_text() if path.exists() else ""
+    lines = text.splitlines(keepends=True)
+    if lines and not lines[-1].endswith("\n"):
+        lines[-1] += "\n"
+    head, end, indent = yaml_servers(lines)
+    start, stop = (-1, -1) if head < 0 else yaml_entry_span(lines, head, end, indent, ep.name)
+
+    if remove:
+        if start < 0:
+            return Result(client, path, "not configured")
+        new_lines, action = lines[:start] + lines[stop:], "removed"
+    elif start >= 0:
+        new_lines, action = lines[:start] + yaml_block(ep, indent) + lines[stop:], "updated"
+    elif head >= 0:
+        if lines[head].split("#", 1)[0].strip().endswith("{}"):
+            lines[head] = "mcpServers:\n"
+        new_lines, action = lines[:end] + yaml_block(ep, indent) + lines[end:], "added"
+    else:
+        sep = ["\n"] if lines and lines[-1].strip() else []
+        new_lines, action = lines + sep + ["mcpServers:\n"] + yaml_block(ep, "  "), "added"
+
+    new = "".join(new_lines)
+    if new == text:
+        return Result(client, path, "unchanged")
+    if dry:
+        return Result(client, path, action + " (dry run)")
+    saved = backup(path)
+    write_text(path, new)
+    return Result(client, path, action, saved)
+
+
 def cli_apply(client: Client, ep: Endpoint, remove: bool, force: bool, dry: bool) -> list[Result]:
     exe = shutil.which("claude")
     if not exe:
@@ -598,7 +713,7 @@ def apply(client: Client, ep: Endpoint, remove: bool, force: bool, dry: bool) ->
         return [Result(client, None, "manual", message=client.instructions(ep))]
     if client.kind == "cli":
         return cli_apply(client, ep, remove, force, dry)
-    writer = toml_apply if client.kind == "toml" else json_apply
+    writer = {"toml": toml_apply, "yaml": yaml_apply}.get(client.kind, json_apply)
     return [writer(client, ep, p, remove, force, dry) for p in client.targets()]
 
 
@@ -612,6 +727,12 @@ def configured(client: Client, ep: Endpoint) -> Optional[bool]:
         try:
             if client.kind == "toml":
                 if toml_without(p.read_text(), ep.name)[1]:
+                    return True
+                continue
+            if client.kind == "yaml" and p.suffix != ".json":
+                lines = p.read_text().splitlines(keepends=True)
+                head, end, indent = yaml_servers(lines)
+                if head >= 0 and yaml_entry_span(lines, head, end, indent, ep.name)[0] >= 0:
                     return True
                 continue
             data, _ = load_json(p)
