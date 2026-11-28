@@ -44,7 +44,9 @@ FROM alpine:latest
 # other hosts without running the inference client as root.
 ARG AMASS_UID=1000
 ARG AMASS_GID=1000
-RUN apk --no-cache add bash ca-certificates \
+# Tesseract reads scanned documents for a document model that cannot see
+# pictures (options.ai.documents.vision).
+RUN apk --no-cache add bash ca-certificates tesseract-ocr tesseract-ocr-data-eng \
  && addgroup -S -g "$AMASS_GID" amass \
  && adduser -S -u "$AMASS_UID" -G amass amass \
  && mkdir -p /.config/amass /data \
